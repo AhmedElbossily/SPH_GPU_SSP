@@ -19,6 +19,85 @@
 
 bool m_individual_tool_files = false;
 
+void generate_gnuplot_script(const char *filename, const char *output, const char *title, const char *datafile)
+{
+	FILE *gnuplot_script = fopen(filename, "w");
+	fprintf(gnuplot_script, "set terminal png size 800,600\n");
+	fprintf(gnuplot_script, "set output '%s'\n", output);
+	fprintf(gnuplot_script, "set title '%s'\n", title);
+	fprintf(gnuplot_script, "set xlabel 'Time [s]'\n");
+	fprintf(gnuplot_script, "set ylabel 'Temperature [°C]'\n");
+	fprintf(gnuplot_script, "set grid\n");
+	fprintf(gnuplot_script, "plot '%s' using 1:2 with linespoints title 'Temperature'\n", datafile);
+	fclose(gnuplot_script);
+
+	// Execute GNUplot script
+	char command[256];
+	sprintf(command, "/usr/bin/gnuplot %s", filename);
+	system(command);
+}
+
+void report_temp(float_t *h_temp, float4_t *h_pos, float_t *h_blanked, float_t *h_part, int _num_part)
+{
+	FILE *m_temp = fopen("Results_sammary/temp.csv", "a+");
+	FILE *m_temp_R0_plot = fopen("Results_sammary/temp_R0_plot.csv", "a+");
+	FILE *m_temp_R65_plot = fopen("Results_sammary/temp_R65_plot.csv", "a+");
+	FILE *m_temp_R115_plot = fopen("Results_sammary/temp_R115_plot.csv", "a+");
+
+	float_t temp_R0 = 0.;
+	float_t temp_R65 = 0.;
+	float_t temp_R115 = 0.;
+	int count_R0 = 0;
+	int count_R65 = 0;
+	int count_R115 = 0;
+	float_t z = global_top_surface - 4.6;
+	float_t z1 = z + 0.5;
+	float_t z2 = z - 0.5;
+	for (int i = 0; i < _num_part; i++)
+	{
+		if (h_blanked[i] == 1. || h_part[i] == 1.)
+			continue;
+
+		float_t r = sqrt(h_pos[i].x * h_pos[i].x + h_pos[i].y * h_pos[i].y);
+		if (h_pos[i].z < z1 && h_pos[i].z > z2)
+		{
+			if (r < 1)
+			{
+				temp_R0 += h_temp[i];
+				count_R0++;
+			}
+			if (r > 6. && r < 7.)
+			{
+				temp_R65 += h_temp[i];
+				count_R65++;
+			}
+			if (r > 11. && r < 12.)
+			{
+				temp_R115 += h_temp[i];
+				count_R115++;
+			}
+		}
+	}
+	float_t ct = global_time_current * global_Vsf;
+	fprintf(m_temp, "%.2f, %.2f, %.2f, %.2f\n", ct, temp_R0 / count_R0, temp_R65 / count_R65, temp_R115 / count_R115);
+	fprintf(m_temp_R0_plot, "%.2f, %.2f\n", ct, temp_R0 / count_R0);
+	fprintf(m_temp_R65_plot, "%.2f, %.2f\n", ct, temp_R65 / count_R65);
+	fprintf(m_temp_R115_plot, "%.2f, %.2f\n", ct, temp_R115 / count_R115);
+	fflush(m_temp);
+	fflush(m_temp_R0_plot);
+	fflush(m_temp_R65_plot);
+	fflush(m_temp_R115_plot);
+	fclose(m_temp);
+	fclose(m_temp_R0_plot);
+	fclose(m_temp_R65_plot);
+	fclose(m_temp_R115_plot);
+
+	// Generate GNUplot scripts and plots
+	generate_gnuplot_script("Results_sammary/plot_temp_R0.gp", "Results_sammary/ct_vs_temp_R0.png", "Time vs Temperature (R0)", "Results_sammary/temp_R0_plot.csv");
+	generate_gnuplot_script("Results_sammary/plot_temp_R65.gp", "Results_sammary/ct_vs_temp_R65.png", "Time vs Temperature (R6.5)", "Results_sammary/temp_R65_plot.csv");
+	generate_gnuplot_script("Results_sammary/plot_temp_R115.gp", "Results_sammary/ct_vs_temp_R115.png", "Time vs Temperature (R11.5)", "Results_sammary/temp_R115_plot.csv");
+}
+
 void vtk_writer_write_blanking() {
 	char buf[256];
 	sprintf(buf, "results/vtk_bbox_%06d.vtk", global_time_step);
@@ -259,6 +338,8 @@ void vtk_writer_write(particle_gpu *particles) {
 	fprintf(fp, "\n");
 
 	fclose(fp);
+
+	report_temp(h_T, h_pos, h_blanked, h_tool_p, n);
 }
 
 

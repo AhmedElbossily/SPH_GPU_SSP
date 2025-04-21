@@ -52,6 +52,13 @@ float_t global_wz;
 float_t global_shoulder_velocity;
 float_t global_Vsf;
 
+float_t global_dz = 0.0;
+
+float_t global_shoulder_contact_surface = std::numeric_limits<float_t>::min();
+float_t global_shoulder_raduis = 0.0;
+float_t global_probe_raduis = 0.0;
+float_t global_top_surface = 0.0;
+
 int poll_temp()
 {
 	FILE *in;
@@ -94,10 +101,16 @@ int main(int argc, char *argv[])
 		mkdir("results", 0777);
 	}
 
+	if (stat("Results_sammary", &st) == -1)
+	{
+		mkdir("Results_sammary", 0777);
+	}
+
 	// clear files from result directory
 	int ret;
-	ret = system("rm results/*.txt");
-	ret = system("rm results/*.vtk");
+	ret = system("rm results/*");
+	ret = system("rm Results_sammary/*");
+
 
 #if defined Thermal_Conduction_Brookshaw && defined Thermal_Conduction_PSE // Check #define Thermal_Conduction_Brookshaw & #define Thermal_Conduction_PSE from types.h
 	printf("Either define thermal conduction in types.h via Thermal_Conduction_Brookshaw OR Thermal_Conduction_PSE, but not both!\n");

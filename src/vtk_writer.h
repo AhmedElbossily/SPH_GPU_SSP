@@ -33,6 +33,9 @@
 
 extern blanking *global_blanking;
 extern int global_time_step;
+extern float_t global_Vsf;
+extern float_t global_top_surface;
+extern float_t global_time_current;
 
 void vtk_writer_write(particle_gpu *particles);
 void vtk_writer_write(tool_3d_gpu *tool);

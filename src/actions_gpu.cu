@@ -392,7 +392,7 @@ __global__ void do_check_valid_full(particle_gpu particles) {
 	}
 }
 
-__global__ void do_plasticity_johnson_cook(particle_gpu particles, float_t dt) {
+__global__ void do_plasticity_johnson_cook(particle_gpu particles, float_t dt, float_t global_Vsf) {
 	unsigned int pidx = blockIdx.x * blockDim.x + threadIdx.x;
 	if (pidx >= particles.N) return;
 	if (particles.blanked[pidx] == 1.) return;
@@ -442,7 +442,7 @@ __global__ void do_plasticity_johnson_cook(particle_gpu particles, float_t dt) {
 	}
 
 	float_t eps_pl_new = eps_pl + sqrtf(2.0/3.0) * fmaxf(delta_lambda,0.);
-	float_t eps_pl_dot_new = sqrtf(2.0/3.0) *  fmaxf(delta_lambda,0.) / dt;
+	float_t eps_pl_dot_new =( sqrtf(2.0/3.0) *  fmaxf(delta_lambda,0.) / dt)/global_Vsf;
 
 	particles.eps_pl[pidx] = eps_pl_new;
 	particles.eps_pl_dot[pidx] = eps_pl_dot_new;
@@ -463,7 +463,7 @@ __global__ void do_plasticity_johnson_cook(particle_gpu particles, float_t dt) {
 
 	particles.S[pidx] = S_new;
 
-	//plastic work to heat
+	//plastic work to heatinteractions_calculate_force_die_using_kirk_method
 	if (thermals_wp.tq != 0.) {
 		float_t delta_eps_pl = eps_pl_new - eps_pl;
 		float_t sigma_Y = sigma_yield(johnson_cook, eps_pl_new, eps_pl_dot_new, T);
@@ -554,6 +554,150 @@ __global__ void do_blanking(particle_gpu particles, float_t vel_max_squared, vec
 	}
 }
 
+__device__ void kirk_contact_force(vec3_t &fN_each, float_t pd, float3_t vij, float3_t nav, float_t dt, float_t p_temp)
+{
+	float_t DFAC = 0.2;
+
+	float_t PFAC_init = 0.1;
+
+	float_t PFAC = PFAC_init;
+
+	float_t slave_mass = physics.mass;
+	float_t dpN = vij.x * nav.x + vij.y * nav.y + vij.z * nav.z;
+
+	float_t kij = ((slave_mass * slave_mass) / (slave_mass + slave_mass)) * (PFAC / (dt * dt));
+	float_t cij = DFAC * (slave_mass + slave_mass) * sqrt_t((kij * (slave_mass + slave_mass)) / (slave_mass * slave_mass));
+
+	fN_each.x += -1. * (kij * pd + cij * dpN) * nav.x;
+	fN_each.y += -1. * (kij * pd + cij * dpN) * nav.y;
+	fN_each.z += -1. * (kij * pd + cij * dpN) * nav.z;
+}
+__device__ double sigma_yield_interaction(joco_constants jc, double eps_pl, double eps_pl_dot, double t)
+{
+	double theta = (t - jc.Tref) / (jc.Tmelt - jc.Tref);
+
+	double Term_A = jc.A + jc.B * pow(eps_pl, jc.n);
+	// double Term_A = jc.A +(678.e6) * pow(eps_pl, 0.71);
+	double Term_B = 1.0;
+
+	double eps_dot = eps_pl_dot / jc.eps_dot_ref;
+
+	if (eps_dot > 1.0)
+	{
+		Term_B = 1.0 + jc.C * log_t(eps_dot);
+	}
+	else
+	{
+		Term_B = pow((1.0 + eps_dot), jc.C);
+	}
+
+	double Term_C = 1.0 - pow(theta, jc.m);
+	return Term_A * Term_B * Term_C;
+}
+
+__device__ void calculate_contact_force(bool &is_sticking, vec3_t &fN, vec3_t &fT, vec3_t &vr, vec3_t &fricold, float_t gN, vec3_t normal, vec3_t vs, float_t dt, float_t p_temp, float_t contact_alpha, float_t slave_mass, float_t friction_mu, float_t ffl, float_t cp, particle_gpu &particles, unsigned int pidx, float_t &T)
+{
+	vec3_t kdeltae = contact_alpha * slave_mass * vr / dt;
+	float_t fy = friction_mu * glm::length(fN);
+	vec3_t fstar = fricold - kdeltae;
+	float_t fstar_mag = glm::length(fstar);
+	is_sticking = false;
+
+	if (fstar_mag != 0)
+	{
+		if (fy > ffl)
+		{
+			fy = ffl;
+			is_sticking = true;
+		}
+
+		vec3_t fT_t = fy * (fstar / fstar_mag);
+		fT += fT_t;
+
+	}
+}
+
+__global__ void do_contact_froce(particle_gpu particles, float_t dt,
+                                 float_t shoulder_surface, float_t shoulder_velocity,
+                                 float_t shoulder_radius, float_t dz, float_t wz, float_t probe_raduis) {
+    unsigned int pidx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (pidx >= particles.N || particles.blanked[pidx] == 1. || particles.tool_particle[pidx] == 1.) return;
+
+    float4_t pi = particles.pos[pidx];
+    float_t p_radius = sqrtf(pi.x * pi.x + pi.y * pi.y);
+
+    // Early exit for particles outside the shoulder radius or below the shoulder surface
+    if (p_radius > shoulder_radius ||  p_radius < probe_raduis || pi.z < shoulder_surface) return;
+
+    // Precompute values
+    float_t p_temp = particles.T[pidx];
+    float_t eps_pl = particles.eps_pl[pidx];
+    float_t eps_pl_dot = particles.eps_pl_dot[pidx];
+    float_t sigma_Y = sigma_yield_interaction(johnson_cook, eps_pl, eps_pl_dot, p_temp);
+    float_t ffl = (sigma_Y / sqrtf(3.0)) * dz * dz;
+
+    vec3_t vs(particles.vel[pidx].x, particles.vel[pidx].y, particles.vel[pidx].z);
+    vec3_t fricold(particles.ft[pidx].x, particles.ft[pidx].y, particles.ft[pidx].z);
+
+    vec3_t fN = {0.0, 0.0, 0.0};
+    vec3_t fT = {0.0, 0.0, 0.0};
+
+    const float_t contact_alpha = 0.5;
+    const float_t friction_mu = 0.6;
+
+    // Under shoulder
+    if (pi.z > shoulder_surface) {
+        float3_t normal = {0.0, 0.0, 1.0};
+        particles.n[pidx] = normal;
+
+        float_t gN = pi.z - shoulder_surface;
+
+		vec3_t w(0.0, 0.0, wz);
+		vec3_t r(pi.x, pi.y, 0.0);
+		vec3_t vm = glm::cross(w, r);
+        vm.z = shoulder_velocity;
+
+        // Compute relative velocity
+        float4_t v_particle = particles.vel[pidx];
+
+        float3_t v_diff = make_float3_t(v_particle.x - vm.x, v_particle.y - vm.y, v_particle.z - vm.z);
+
+        float_t v_diff_dot_normal = v_diff.x * normal.x + v_diff.y * normal.y + v_diff.z * normal.z;
+
+        float3_t v_relative = make_float3_t(v_diff.x - v_diff_dot_normal * normal.x, v_diff.y - v_diff_dot_normal * normal.y, v_diff.z - v_diff_dot_normal * normal.z);
+
+        float_t v_rel_mag = sqrt_t(v_relative.x * v_relative.x + v_relative.y * v_relative.y + v_relative.z * v_relative.z);
+
+        // Compute normal contact force
+        kirk_contact_force(fN, gN, v_diff, normal, dt, p_temp);
+
+        // Compute tangential contact force
+ 		vec3_t v_relative_vec = {v_relative.x, v_relative.y, v_relative.z};
+        vec3_t kdeltae = contact_alpha * physics.mass * v_relative_vec / dt;
+        vec3_t fstar = fricold - kdeltae;
+        float_t fstar_mag = glm::length(fstar);
+        float_t fy = friction_mu * glm::length(fN);
+
+        if (fstar_mag > 0.0f) {
+            if (fy > ffl) {
+                fy = ffl;
+                particles.vel[pidx] = make_float4_t(vm.x, vm.y, vm.z,0); // Stick to the shoulder velocity
+            }
+
+            vec3_t fT_t = fy * (fstar / fstar_mag);
+            fT += fT_t;
+
+            // Heat generation
+            particles.T[pidx] += thermals_wp.eta * dt * fy * v_rel_mag / (thermals_wp.cp * physics.mass);
+        } 
+    }
+
+    // Update particle forces
+    particles.fc[pidx] = make_float3_t(fN.x, fN.y, fN.z);
+    particles.ft[pidx] = make_float3_t(fT.x, fT.y, fT.z);
+}
+
+
 //---------------------------------------------------------------------
 
 // float2 + struct
@@ -566,6 +710,14 @@ struct add_float4 {
         return r;
     }
  };
+
+void contact_force(particle_gpu *particles) {
+	const unsigned int block_size = BLOCK_SIZE;
+	dim3 dG((particles->N + block_size-1) / block_size);
+	dim3 dB(block_size);
+	do_contact_froce<<<dG,dB>>>(*particles, global_time_dt, global_shoulder_contact_surface, global_shoulder_velocity, global_shoulder_raduis, global_dz, global_wz, global_probe_raduis);
+	check_cuda_error("After material_eos\n");
+}
 
 void material_eos(particle_gpu *particles) {
 	const unsigned int block_size = BLOCK_SIZE;
@@ -620,7 +772,7 @@ void plasticity_johnson_cook(particle_gpu *particles) {
 	const unsigned int block_size = BLOCK_SIZE;
 	dim3 dG((particles->N + block_size-1) / block_size);
 	dim3 dB(block_size);
-	do_plasticity_johnson_cook<<<dG,dB>>>(*particles, global_time_dt);
+	do_plasticity_johnson_cook<<<dG,dB>>>(*particles, global_time_dt, global_Vsf);
 	check_cuda_error("After johnson_cook\n");
 }
 
@@ -646,7 +798,7 @@ void actions_move_tool_particles(particle_gpu *particles, tool_3d_gpu *tool) {
 	dim3 dG((particles->N_init + block_size-1) / block_size);
 	dim3 dB(block_size);
 
-	//vec3_t vel = tool->get_vel();
+	global_shoulder_contact_surface += global_shoulder_velocity * global_time_dt;
 
 	do_move_tool_particles<<<dG,dB>>>(*particles, global_shoulder_velocity, global_wz, global_time_dt);
 	cudaThreadSynchronize();

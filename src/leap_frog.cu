@@ -180,7 +180,9 @@ void leap_frog::step(particle_gpu *particles, grid_base *g, bool record_forces) 
 		globaltool->update_tool();
 		globaltool->compute_contact_force(particles, record_forces);
 	}
-	material_fric_heat_gen(particles, global_tool[0]->get_vel());
+    contact_force(particles);
+
+	//material_fric_heat_gen(particles, global_tool[0]->get_vel());
 
 	perform_boundary_conditions(particles);
 	//perform_boundary_conditions_thermal(particles);

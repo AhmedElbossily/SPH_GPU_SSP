@@ -124,8 +124,9 @@ particle_gpu *setup_RFSSW(int nbox, grid_base **grid)
 
 	// Constants
 	constexpr float_t ms = 1.0;
-	global_Vsf= 100000000.0;
+	global_Vsf = 10.;
 	constexpr float_t dz = 0.4;
+	global_dz = dz;
 	constexpr float_t hdx = 1.3;
 
 	// dimensions of the workpiece
@@ -133,8 +134,10 @@ particle_gpu *setup_RFSSW(int nbox, grid_base **grid)
 	constexpr float_t wp_length = 50.0;
 	constexpr float_t wp_thickness = 5.0 + 2. * dz;
 	constexpr float_t probe_diameter = 6.0;
+	global_probe_raduis = probe_diameter / 2.0;
 	constexpr float_t shoulder_inner_diameter = probe_diameter;
 	constexpr float_t shoulder_outer_diameter = 9.0;
+	global_shoulder_raduis = shoulder_outer_diameter / 2.0;
 	constexpr float_t ring_inner_diameter = shoulder_outer_diameter;
 	constexpr float_t ring_outer_diameter = 17.0;
 	constexpr float_t probe_hight = 10.0;
@@ -147,10 +150,10 @@ particle_gpu *setup_RFSSW(int nbox, grid_base **grid)
 	int ny = static_cast<int>(wp_length / dz) + 1;
 
 	// BC
- 	global_shoulder_velocity = -1.25e-3 * global_Vsf;
+	global_shoulder_velocity = -1.25 * global_Vsf;
 	float_t probe_plunging_speed = -1.25 * global_shoulder_velocity; // 1.25 volume conservation
 	global_wz = 2700 * 0.104719755 * global_Vsf;
-	glm::vec3 w(0.0, 0.0, global_wz); 
+	glm::vec3 w(0.0, 0.0, global_wz);
 
 	// physical constants
 	phys.E = 71.7e9;
@@ -174,7 +177,7 @@ particle_gpu *setup_RFSSW(int nbox, grid_base **grid)
 	// Thermal Constants
 	trml_wp.cp = (860. * 1.0e6) / ms;					  // Heat Capacity
 	trml_wp.tq = 0.9;									  // Taylor-Quinney Coefficient
-	trml_wp.k = 153. * 1.0e6 * global_Vsf;						  // Thermal Conduction
+	trml_wp.k = 153. * 1.0e6 * global_Vsf;				  // Thermal Conduction
 	trml_wp.alpha = trml_wp.k / (phys.rho0 * trml_wp.cp); // Thermal diffusivity
 	trml_wp.eta = 0.9;
 
@@ -182,7 +185,7 @@ particle_gpu *setup_RFSSW(int nbox, grid_base **grid)
 	float_t steel_rho = 7850.0 * 1.0e-6 * ms;
 	trml_tool.cp = (560.0 * 1.0e6) / ms;						// Heat Capacity
 	trml_tool.tq = 0.9;											// Taylor-Quinney Coefficient
-	trml_tool.k = 33.0 * 1.0e6 * global_Vsf;							// Thermal Conduction
+	trml_tool.k = 33.0 * 1.0e6 * global_Vsf;					// Thermal Conduction
 	trml_tool.alpha = trml_tool.k / (phys.rho0 * trml_tool.cp); // Thermal diffusivity
 	trml_tool.eta = 0.9;
 
@@ -281,6 +284,15 @@ particle_gpu *setup_RFSSW(int nbox, grid_base **grid)
 		}
 	}
 
+	for (int i = 0; i < n; i++)
+	{
+		if (tool_p[i] == 0.0)
+		{
+			global_shoulder_contact_surface = std::max(global_shoulder_contact_surface, pos[i].z);
+			global_top_surface = global_shoulder_contact_surface;
+		}
+	}
+
 	actions_setup_corrector_constants(corr);
 	actions_setup_physical_constants(phys);
 	actions_setup_thermal_constants_wp(trml_wp);
@@ -296,7 +308,7 @@ particle_gpu *setup_RFSSW(int nbox, grid_base **grid)
 	particle_gpu *particles = new particle_gpu(pos, vel, rho, T, h, fixed, tool_p, n);
 
 	global_time_dt = 1.565015e-08;
-	global_time_final = 1.e-5;
+	global_time_final = 0.1;
 
 	assert(check_cuda_error());
 	return particles;

@@ -39,7 +39,13 @@ extern int global_time_step;
 
 extern float_t global_wz ;
 extern float_t global_shoulder_velocity;
+extern float_t global_shoulder_contact_surface;
 extern float_t global_Vsf;
+extern float_t global_dz;
+
+extern float_t global_shoulder_raduis;
+extern float_t global_probe_raduis;
+
 
 //equation of state for hydrostatic part of the stress (i.e. pressure)
 void material_eos(particle_gpu *particles);
@@ -82,5 +88,6 @@ void actions_setup_thermal_constants_tool(trml_constants thrm);
 void debug_check_valid(particle_gpu *particles);
 void debug_check_valid_full(particle_gpu *particles);
 void debug_invalidate(particle_gpu *particles);
+void contact_force(particle_gpu *particles);
 
 #endif /* ACTIONS_GPU_H_ */
