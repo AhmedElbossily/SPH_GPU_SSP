@@ -33,6 +33,21 @@ __constant__ static joco_constants johnson_cook;
 __constant__ static trml_constants thermals_wp;
 __constant__ static trml_constants thermals_tool;
 
+
+__device__ void updatePosition(float_t x, float_t y, float_t w, float_t t, float_t &x_new, float_t &y_new)
+{
+	// Convert angular velocity to radians per second
+	float_t omega = (w * 2 * M_PI) / 60.0;
+
+	// Calculate the angle of rotation
+	float_t theta = omega * t;
+
+	// Compute the new position
+	x_new = x * cos(theta) - y * sin(theta);
+	y_new = x * sin(theta) + y * cos(theta);
+}
+
+
 __device__ __forceinline__ bool isnaninf(float_t val) {
 	return isnan(val) || isinf(val);
 }
@@ -52,7 +67,7 @@ __global__ void do_material_eos(const float_t *__restrict__ blanked, const float
 	p[pidx] = c0*c0*(rhoi - rho0);
 }
 
-__global__ void do_move_tool_particles(particle_gpu particles, vec3_t vel, float_t dt) {
+__global__ void do_move_tool_particles(particle_gpu particles, float_t vel_z, float_t gwz, float_t dt) {
 	unsigned int pidx = blockIdx.x * blockDim.x + threadIdx.x;
 	if (pidx >= particles.N_init) return;
 
@@ -60,11 +75,20 @@ __global__ void do_move_tool_particles(particle_gpu particles, vec3_t vel, float
 		return;
 	}
 
-	float4_t pos = particles.pos[pidx];
-	vec3_t qp(pos.x, pos.y, pos.z);
-	qp += vel*dt;
+	float_t px;
+	float_t py;
+	updatePosition(particles.pos[pidx].x, particles.pos[pidx].y, gwz, dt, px, py);
+	particles.pos[pidx].x = px;
+	particles.pos[pidx].y = py;
+	particles.pos[pidx].z += vel_z * dt;
 
-	particles.pos[pidx] = make_float4_t(qp.x, qp.y, qp.z, 0.);
+	glm::vec3 r(px, py, 0.0);
+	glm::vec3 w(0, 0, gwz);
+	glm::vec3 v = glm::cross(w, r);
+
+	particles.vel[pidx].x = v.x;
+	particles.vel[pidx].y = v.y;
+	particles.vel[pidx].z = vel_z;
 }
 
 __global__ void do_corrector_artificial_stress(const float_t *__restrict__ blanked, const float_t *__restrict__ in_tool,
@@ -622,9 +646,9 @@ void actions_move_tool_particles(particle_gpu *particles, tool_3d_gpu *tool) {
 	dim3 dG((particles->N_init + block_size-1) / block_size);
 	dim3 dB(block_size);
 
-	vec3_t vel = tool->get_vel();
+	//vec3_t vel = tool->get_vel();
 
-	do_move_tool_particles<<<dG,dB>>>(*particles, vel, global_time_dt);
+	do_move_tool_particles<<<dG,dB>>>(*particles, global_shoulder_velocity, global_wz, global_time_dt);
 	cudaThreadSynchronize();
 }
 
