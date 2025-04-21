@@ -150,7 +150,7 @@ particle_gpu *setup_RFSSW(int nbox, grid_base **grid)
 	int ny = static_cast<int>(wp_length / dz) + 1;
 
 	// BC
-	global_shoulder_velocity = -1.25 * global_Vsf;
+	global_shoulder_velocity = -10000. * global_Vsf;
 	float_t probe_plunging_speed = -1.25 * global_shoulder_velocity; // 1.25 volume conservation
 	global_wz = 2700 * 0.104719755 * global_Vsf;
 	glm::vec3 w(0.0, 0.0, global_wz);
@@ -308,7 +308,7 @@ particle_gpu *setup_RFSSW(int nbox, grid_base **grid)
 	particle_gpu *particles = new particle_gpu(pos, vel, rho, T, h, fixed, tool_p, n);
 
 	global_time_dt = 1.565015e-08;
-	global_time_final = 0.1;
+	global_time_final = 1.e-5;
 
 	assert(check_cuda_error());
 	return particles;

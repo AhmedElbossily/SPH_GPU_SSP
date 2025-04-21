@@ -190,7 +190,7 @@ int main(int argc, char *argv[])
 			stepper->step(particles, grid, (record_this_step && global_tool_forces != 0));
 		}
 
-		if (step == 100)
+		if (step == 1000)
 		{
 			cudaEventRecord(intermediate);
 			cudaEventSynchronize(intermediate);

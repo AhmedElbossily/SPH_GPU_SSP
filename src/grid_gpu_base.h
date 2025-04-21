@@ -37,7 +37,7 @@
 
 #include <thrust/extrema.h>
 #include <thrust/device_ptr.h>
-
+#include <thrust/count.h>
 #include <stdio.h>
 
 #include "particle_gpu.h"
