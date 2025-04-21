@@ -91,6 +91,9 @@ int poll_temp()
 int main(int argc, char *argv[])
 {
 
+	// Redirect stdout to a file
+    freopen("output.txt", "w", stdout);
+
 	// init cuda resources
 	cudaFree(0);
 
