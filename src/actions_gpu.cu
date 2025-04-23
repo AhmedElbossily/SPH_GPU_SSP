@@ -81,20 +81,23 @@ __global__ void do_move_tool_particles(particle_gpu particles, float_t vel_z, fl
 		return;
 	}
 
-	float_t px;
-	float_t py;
-	updatePosition(particles.pos[pidx].x, particles.pos[pidx].y, gwz, dt, px, py);
-	particles.pos[pidx].x = px;
-	particles.pos[pidx].y = py;
-	particles.pos[pidx].z += vel_z * dt;
+	if (particles.fixed[pidx] == 0.)
+	{
+		float_t px;
+		float_t py;
+		updatePosition(particles.pos[pidx].x, particles.pos[pidx].y, gwz, dt, px, py);
+		particles.pos[pidx].x = px;
+		particles.pos[pidx].y = py;
+		particles.pos[pidx].z += vel_z * dt;
 
-	glm::vec3 r(px, py, 0.0);
-	glm::vec3 w(0, 0, gwz);
-	glm::vec3 v = glm::cross(w, r);
+		glm::vec3 r(px, py, 0.0);
+		glm::vec3 w(0, 0, gwz);
+		glm::vec3 v = glm::cross(w, r);
 
-	particles.vel[pidx].x = v.x;
-	particles.vel[pidx].y = v.y;
-	particles.vel[pidx].z = vel_z;
+		particles.vel[pidx].x = v.x;
+		particles.vel[pidx].y = v.y;
+		particles.vel[pidx].z = vel_z;
+	}
 }
 
 __global__ void do_corrector_artificial_stress(const float_t *__restrict__ blanked, const float_t *__restrict__ in_tool,
@@ -865,7 +868,7 @@ __global__ void do_contact_froce(particle_gpu particles, float_t dt,
 	// Particle is penetrating the shoulder from outside
 	if (p_radius > centerShoulderRadis && p_radius < shoulder_radius)
 	{
-		float3_t normal = {pi.x / p_radius, pi.y / p_radius, 0.0};
+		float3_t normal = {-pi.x / p_radius, -pi.y / p_radius, 0.0};
 		particles.n[pidx] = normal;
 		float_t gN = shoulder_radius - p_radius;
 		vec3_t w(0.0, 0.0, wz);

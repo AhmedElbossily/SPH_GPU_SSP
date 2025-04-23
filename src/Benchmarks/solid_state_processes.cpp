@@ -237,7 +237,7 @@ particle_gpu *setup_RFSSW(int nbox, grid_base **grid)
 		}
 		else
 		{
-			generate_circular_points_hollow(shoulder_outer_diameter, shoulder_inner_diameter, dz, zz, points);
+			generate_circular_points_hollow(ring_outer_diameter, shoulder_inner_diameter, dz, zz, points);
 		}
 		zz += dz;
 	}
@@ -259,6 +259,7 @@ particle_gpu *setup_RFSSW(int nbox, grid_base **grid)
 
 	for (int i = 0; i < n; i++)
 	{
+		float_t radius = sqrt(points[i].x * points[i].x + points[i].y * points[i].y);
 		pos[i] = {points[i].x, points[i].y, points[i].z, 0};
 		rho[i] = phys.rho0;
 		h[i] = hdx * dz;
@@ -274,7 +275,8 @@ particle_gpu *setup_RFSSW(int nbox, grid_base **grid)
 			fixed[i] = 1;
 		}
 
-		if (pos[i].z > back_plate_hight + wp_thickness)
+		// shoulder
+		if (pos[i].z > back_plate_hight + wp_thickness && radius <= shoulder_outer_diameter / 2.0)
 		{
 			glm::vec3 r(pos[i].x, pos[i].y, 0.0);
 			glm::vec3 v = glm::cross(w, r);
@@ -282,6 +284,17 @@ particle_gpu *setup_RFSSW(int nbox, grid_base **grid)
 
 			tool_p[i] = 1.0;
 			rho[i] = steel_rho;
+		}
+
+		// ring
+		if (pos[i].z > back_plate_hight + wp_thickness && radius > shoulder_outer_diameter / 2.0)
+		{
+
+			vel[i] = {0.,0., 0.0};
+
+			tool_p[i] = 1.0;
+			rho[i] = steel_rho;
+			fixed[i] = 1;
 		}
 	}
 
