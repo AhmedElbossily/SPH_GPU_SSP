@@ -8,7 +8,7 @@ set(CMAKE_CUDA_STANDARD 17)
 enable_language(CUDA)
 
 # Set CUDA architectures and flags
-set(CUDA_ARCHITECTURES "75")
+set(CUDA_ARCHITECTURES "90")
 set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS}")
 
 # Enable separable compilation
