@@ -760,7 +760,7 @@ __global__ void do_contact_froce(particle_gpu particles, float_t dt,
 	}
 
 	// Under shoulder
-	if (pi.z > shoulder_surface && pi.z < shoulder_surface + dz)
+	if ( p_radius < shoulder_radius  && p_radius > probe_raduis  && pi.z > shoulder_surface && pi.z < shoulder_surface + dz)
 	{
 		float3_t normal = {0.0, 0.0, 1.0};
 		particles.n[pidx] = normal;
