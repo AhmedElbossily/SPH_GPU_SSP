@@ -95,6 +95,16 @@ int main(int argc, char *argv[])
 	// Redirect stdout to a file
     //freopen("output.txt", "w", stdout);
 
+	 // Select the third GPU (index 2)
+	 int device_id = 3;
+	 cudaError_t err = cudaSetDevice(device_id);
+	 if (err != cudaSuccess)
+	 {
+		 printf("Failed to set device %d: %s\n", device_id, cudaGetErrorString(err));
+		 return -1;
+	 }
+	 printf("Using GPU %d\n", device_id);
+
 	// init cuda resources
 	cudaFree(0);
 
