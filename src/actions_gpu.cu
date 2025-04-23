@@ -619,7 +619,7 @@ __device__ void calculate_contact_force(bool &is_sticking, vec3_t &fN, vec3_t &f
 
 __global__ void do_contact_froce(particle_gpu particles, float_t dt,
                                  float_t shoulder_surface, float_t shoulder_velocity,
-                                 float_t shoulder_radius, float_t dz, float_t wz, float_t probe_raduis, float_t ring_raduis) {
+                                 float_t shoulder_radius, float_t dz, float_t wz, float_t probe_raduis, float_t ring_raduis, float_t top_surface) {
     unsigned int pidx = blockIdx.x * blockDim.x + threadIdx.x;
     if (pidx >= particles.N || particles.blanked[pidx] == 1. || particles.tool_particle[pidx] == 1.) return;
 
@@ -627,7 +627,7 @@ __global__ void do_contact_froce(particle_gpu particles, float_t dt,
     float_t p_radius = sqrtf(pi.x * pi.x + pi.y * pi.y);
 
     // Early exit for particles outside the shoulder radius or below the shoulder surface
-    if (p_radius > shoulder_radius ||  p_radius < probe_raduis || pi.z < shoulder_surface) return;
+    if (p_radius > ring_raduis || pi.z < shoulder_surface) return;
 
     // Precompute values
     float_t p_temp = particles.T[pidx];
@@ -645,6 +645,41 @@ __global__ void do_contact_froce(particle_gpu particles, float_t dt,
     const float_t contact_alpha = 0.5;
     const float_t friction_mu = 0.6;
 
+	// under the fixed ring
+	if (p_radius > shoulder_radius && pi.z > top_surface) {
+		float3_t normal = {0.0, 0.0, 1.0};
+		particles.n[pidx] = normal;
+		float_t gN = pi.z - top_surface;
+		vec3_t w(0.0, 0.0,0.0);
+		vec3_t r(pi.x, pi.y, 0.0);
+		vec3_t vm = glm::cross(w, r);
+		vm.z = 0.0;
+		// Compute relative velocity
+		float4_t v_particle = particles.vel[pidx];
+		float3_t v_diff = make_float3_t(v_particle.x - vm.x, v_particle.y - vm.y, v_particle.z - vm.z);		
+		float_t v_diff_dot_normal = v_diff.x * normal.x + v_diff.y * normal.y + v_diff.z * normal.z;
+		float3_t v_relative = make_float3_t(v_diff.x - v_diff_dot_normal * normal.x, v_diff.y - v_diff_dot_normal * normal.y, v_diff.z - v_diff_dot_normal * normal.z);
+		float_t v_rel_mag = sqrtf(v_relative.x * v_relative.x + v_relative.y * v_relative.y + v_relative.z * v_relative.z);
+		// Compute normal contact force
+		kirk_contact_force(fN, gN, v_diff, normal, dt, p_temp);
+		// Compute tangential contact force
+		vec3_t v_relative_vec = {v_relative.x, v_relative.y, v_relative.z};
+		vec3_t kdeltae = contact_alpha * physics.mass * v_relative_vec / dt;	
+		vec3_t fstar = fricold - kdeltae;
+		float_t fstar_mag = glm::length(fstar);
+		float_t fy = friction_mu * glm::length(fN);
+		if (fstar_mag > 0.0f) {
+			if (fy > ffl) {
+				fy = ffl;
+				particles.vel[pidx] = make_float4_t(vm.x, vm.y, vm.z,0); // Stick to the shoulder velocity
+			}
+			vec3_t fT_t = fy * (fstar / fstar_mag);
+			fT += fT_t;
+			// Heat generation
+			particles.T[pidx] += thermals_wp.eta * dt * fy * v_rel_mag / (thermals_wp.cp * physics.mass);
+		}
+	}
+	
     // Under shoulder
     if (pi.z > shoulder_surface && pi.z < shoulder_surface + dz) {
         float3_t normal = {0.0, 0.0, 1.0};
@@ -691,7 +726,6 @@ __global__ void do_contact_froce(particle_gpu particles, float_t dt,
             particles.T[pidx] += thermals_wp.eta * dt * fy * v_rel_mag / (thermals_wp.cp * physics.mass);
         } 
 
-		return;
     }
 
 	// center raduis of the shoulder
@@ -743,7 +777,6 @@ __global__ void do_contact_froce(particle_gpu particles, float_t dt,
 			particles.T[pidx] += thermals_wp.eta * dt * fy * v_rel_mag / (thermals_wp.cp * physics.mass);
 		}
 
-		return; // here you need to add the interaction with the pin
 	}
 
 	// Particle is penetrating the shoulder from outside
@@ -779,7 +812,6 @@ __global__ void do_contact_froce(particle_gpu particles, float_t dt,
 			// Heat generation
 			particles.T[pidx] += thermals_wp.eta * dt * fy * v_rel_mag / (thermals_wp.cp * physics.mass);
 		}
-		return; 
 	}
 
 
@@ -806,7 +838,7 @@ void contact_force(particle_gpu *particles) {
 	const unsigned int block_size = BLOCK_SIZE;
 	dim3 dG((particles->N + block_size-1) / block_size);
 	dim3 dB(block_size);
-	do_contact_froce<<<dG,dB>>>(*particles, global_time_dt, global_shoulder_contact_surface, global_shoulder_velocity, global_shoulder_raduis, global_dz, global_wz, global_probe_raduis,global_ring_raduis);
+	do_contact_froce<<<dG,dB>>>(*particles, global_time_dt, global_shoulder_contact_surface, global_shoulder_velocity, global_shoulder_raduis, global_dz, global_wz, global_probe_raduis,global_ring_raduis, global_top_surface);
 	check_cuda_error("After material_eos\n");
 }
 
