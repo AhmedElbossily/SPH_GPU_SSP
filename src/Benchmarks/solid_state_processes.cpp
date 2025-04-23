@@ -308,7 +308,7 @@ particle_gpu *setup_RFSSW(int nbox, grid_base **grid)
 	particle_gpu *particles = new particle_gpu(pos, vel, rho, T, h, fixed, tool_p, n);
 
 	global_time_dt = 1.565015e-08;
-	global_time_final = 1.e-5;
+	global_time_final = 0.42;
 
 	assert(check_cuda_error());
 	return particles;

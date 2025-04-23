@@ -646,7 +646,7 @@ __global__ void do_contact_froce(particle_gpu particles, float_t dt,
     const float_t friction_mu = 0.6;
 
     // Under shoulder
-    if (pi.z > shoulder_surface) {
+    if (pi.z > shoulder_surface && pi.z < shoulder_surface + dz) {
         float3_t normal = {0.0, 0.0, 1.0};
         particles.n[pidx] = normal;
 
@@ -690,7 +690,98 @@ __global__ void do_contact_froce(particle_gpu particles, float_t dt,
             // Heat generation
             particles.T[pidx] += thermals_wp.eta * dt * fy * v_rel_mag / (thermals_wp.cp * physics.mass);
         } 
+
+		return;
     }
+
+	// center raduis of the shoulder
+	float_t centerShoulderRadis = (shoulder_radius + probe_raduis) / 2.0;
+
+	// Particle is penetrating the shoulder from inside
+	if (p_radius < centerShoulderRadis && p_radius > probe_raduis ) {
+		float3_t normal = {pi.x / p_radius, pi.y / p_radius, 0.0};
+		particles.n[pidx] = normal;
+
+		float_t gN = p_radius - probe_raduis;
+
+		vec3_t w(0.0, 0.0, wz);
+		vec3_t r(probe_raduis * normal., probe_raduis * normal.y, 0.0);
+		vec3_t vm = glm::cross(w, r);
+		vm.z = shoulder_velocity;
+
+		// Compute relative velocity
+		float4_t v_particle = particles.vel[pidx];
+
+		float3_t v_diff = make_float3_t(v_particle.x - vm.x, v_particle.y - vm.y, v_particle.z - vm.z);
+
+		float_t v_diff_dot_normal = v_diff.x * normal.x + v_diff.y * normal.y + v_diff.z * normal.z;
+
+		float3_t v_relative = make_float3_t(v_diff.x - v_diff_dot_normal * normal.x, v_diff.y - v_diff_dot_normal * normal.y, v_diff.z - v_diff_dot_normal * normal.z);
+
+		float_t v_rel_mag = sqrtf(v_relative.x * v_relative.x + v_relative.y * v_relative.y + v_relative.z * v_relative.z);
+
+		// Compute normal contact force
+		kirk_contact_force(fN, gN, v_diff, normal, dt, p_temp);
+
+		// Compute tangential contact force
+ 		vec3_t v_relative_vec = {v_relative.x, v_relative.y, v_relative.z};
+		vec3_t kdeltae = contact_alpha * physics.mass * v_relative_vec / dt;
+		vec3_t fstar = fricold - kdeltae;
+		float_t fstar_mag = glm::length(fstar);
+		float_t fy = friction_mu * glm::length(fN);
+
+		if (fstar_mag > 0.0f) {
+			if (fy > ffl) {
+				fy = ffl;
+				particles.vel[pidx] = make_float4_t(vm.x, vm.y, vm.z,0); // Stick to the shoulder velocity
+			}
+
+			vec3_t fT_t = fy * (fstar / fstar_mag);
+			fT += fT_t;
+
+			// Heat generation
+			particles.T[pidx] += thermals_wp.eta * dt * fy * v_rel_mag / (thermals_wp.cp * physics.mass);
+		}
+
+		return; // here you need to add the interaction with the pin
+	}
+
+	// Particle is penetrating the shoulder from outside
+	if (p_radius > centerShoulderRadis && p_radius < shoulder_radius) {
+		float3_t normal = {pi.x / p_radius, pi.y / p_radius, 0.0};
+		particles.n[pidx] = normal;
+		float_t gN = shoulder_radius - p_radius;
+		vec3_t w(0.0, 0.0, wz);
+		vec3_t r(shoulder_radius * normal.x, shoulder_radius * normal.y, 0.0);
+		vec3_t vm = glm::cross(w, r);
+		vm.z = shoulder_velocity;
+		// Compute relative velocity
+		float4_t v_particle = particles.vel[pidx];
+		float3_t v_diff = make_float3_t(v_particle.x - vm.x, v_particle.y - vm.y, v_particle.z - vm.z);
+		float_t v_diff_dot_normal = v_diff.x * normal.x + v_diff.y * normal.y + v_diff.z * normal.z;
+		float3_t v_relative = make_float3_t(v_diff.x - v_diff_dot_normal * normal.x, v_diff.y - v_diff_dot_normal * normal.y, v_diff.z - v_diff_dot_normal * normal.z);
+		float_t v_rel_mag = sqrtf(v_relative.x * v_relative.x + v_relative.y * v_relative.y + v_relative.z * v_relative.z);
+		// Compute normal contact force
+		kirk_contact_force(fN, gN, v_diff, normal, dt, p_temp);
+		// Compute tangential contact force
+		vec3_t v_relative_vec = {v_relative.x, v_relative.y, v_relative.z};
+		vec3_t kdeltae = contact_alpha * physics.mass * v_relative_vec / dt;
+		vec3_t fstar = fricold - kdeltae;
+		float_t fstar_mag = glm::length(fstar);
+		float_t fy = friction_mu * glm::length(fN);
+		if (fstar_mag > 0.0f) {
+			if (fy > ffl) {
+				fy = ffl;
+				particles.vel[pidx] = make_float4_t(vm.x, vm.y, vm.z,0); // Stick to the shoulder velocity
+			}
+			vec3_t fT_t = fy * (fstar / fstar_mag);
+			fT += fT_t;
+			// Heat generation
+			particles.T[pidx] += thermals_wp.eta * dt * fy * v_rel_mag / (thermals_wp.cp * physics.mass);
+		}
+		return; 
+	}
+
 
     // Update particle forces
     particles.fc[pidx] = make_float3_t(fN.x, fN.y, fN.z);
