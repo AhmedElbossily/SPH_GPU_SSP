@@ -705,7 +705,7 @@ __global__ void do_contact_froce(particle_gpu particles, float_t dt,
 		float_t gN = p_radius - probe_raduis;
 
 		vec3_t w(0.0, 0.0, wz);
-		vec3_t r(probe_raduis * normal., probe_raduis * normal.y, 0.0);
+		vec3_t r(probe_raduis * normal.x, probe_raduis * normal.y, 0.0);
 		vec3_t vm = glm::cross(w, r);
 		vm.z = shoulder_velocity;
 
