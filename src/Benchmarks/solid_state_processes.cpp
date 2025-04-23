@@ -130,8 +130,8 @@ particle_gpu *setup_RFSSW(int nbox, grid_base **grid)
 	constexpr float_t hdx = 1.3;
 
 	// dimensions of the workpiece
-	constexpr float_t wp_width = 50.0;
-	constexpr float_t wp_length = 50.0;
+	constexpr float_t wp_width = 25.0;
+	constexpr float_t wp_length = 25.0;
 	constexpr float_t wp_thickness = 5.0 + 2. * dz;
 	constexpr float_t probe_diameter = 6.0;
 	global_probe_raduis = probe_diameter / 2.0;
@@ -309,7 +309,7 @@ particle_gpu *setup_RFSSW(int nbox, grid_base **grid)
 	particle_gpu *particles = new particle_gpu(pos, vel, rho, T, h, fixed, tool_p, n);
 
 	global_time_dt = 1.565015e-08;
-	global_time_final = 0.21;
+	global_time_final = 0.1;
 
 	assert(check_cuda_error());
 	return particles;
