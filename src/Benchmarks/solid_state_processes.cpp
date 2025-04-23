@@ -140,6 +140,7 @@ particle_gpu *setup_RFSSW(int nbox, grid_base **grid)
 	global_shoulder_raduis = shoulder_outer_diameter / 2.0;
 	constexpr float_t ring_inner_diameter = shoulder_outer_diameter;
 	constexpr float_t ring_outer_diameter = 17.0;
+	global_ring_raduis = ring_outer_diameter / 2.0;
 	constexpr float_t probe_hight = 10.0;
 	constexpr float_t shoulder_hight = 10.0;
 	constexpr float_t ring_hight = 5.0;

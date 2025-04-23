@@ -45,6 +45,7 @@ extern float_t global_dz;
 
 extern float_t global_shoulder_raduis;
 extern float_t global_probe_raduis;
+extern float_t global_ring_raduis;
 
 
 //equation of state for hydrostatic part of the stress (i.e. pressure)

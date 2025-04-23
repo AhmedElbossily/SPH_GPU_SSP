@@ -56,6 +56,7 @@ float_t global_dz = 0.0;
 
 float_t global_shoulder_contact_surface = std::numeric_limits<float_t>::min();
 float_t global_shoulder_raduis = 0.0;
+float_t global_ring_raduis = 0.0;
 float_t global_probe_raduis = 0.0;
 float_t global_top_surface = 0.0;
 

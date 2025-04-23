@@ -63,6 +63,7 @@ extern float_t global_shoulder_raduis;
 extern float_t global_probe_raduis;
 
 extern float_t global_dz;
+extern float_t global_ring_raduis;
 
 particle_gpu *setup_RFSSW(int nbox, grid_base **grid);  
 #endif /* SSP_H_ */

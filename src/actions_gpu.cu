@@ -619,7 +619,7 @@ __device__ void calculate_contact_force(bool &is_sticking, vec3_t &fN, vec3_t &f
 
 __global__ void do_contact_froce(particle_gpu particles, float_t dt,
                                  float_t shoulder_surface, float_t shoulder_velocity,
-                                 float_t shoulder_radius, float_t dz, float_t wz, float_t probe_raduis) {
+                                 float_t shoulder_radius, float_t dz, float_t wz, float_t probe_raduis, float_t ring_raduis) {
     unsigned int pidx = blockIdx.x * blockDim.x + threadIdx.x;
     if (pidx >= particles.N || particles.blanked[pidx] == 1. || particles.tool_particle[pidx] == 1.) return;
 
@@ -806,7 +806,7 @@ void contact_force(particle_gpu *particles) {
 	const unsigned int block_size = BLOCK_SIZE;
 	dim3 dG((particles->N + block_size-1) / block_size);
 	dim3 dB(block_size);
-	do_contact_froce<<<dG,dB>>>(*particles, global_time_dt, global_shoulder_contact_surface, global_shoulder_velocity, global_shoulder_raduis, global_dz, global_wz, global_probe_raduis);
+	do_contact_froce<<<dG,dB>>>(*particles, global_time_dt, global_shoulder_contact_surface, global_shoulder_velocity, global_shoulder_raduis, global_dz, global_wz, global_probe_raduis,global_ring_raduis);
 	check_cuda_error("After material_eos\n");
 }
 
