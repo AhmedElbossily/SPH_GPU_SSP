@@ -713,7 +713,7 @@ __device__ void calculate_contact_force(bool &is_sticking, vec3_t &fN, vec3_t &f
 
 __global__ void do_contact_froce(particle_gpu particles, float_t dt,
 								 float_t shoulder_surface, float_t shoulder_velocity,
-								 float_t shoulder_radius, float_t dz, float_t wz, float_t probe_raduis, float_t ring_raduis, float_t top_surface, float_t probe_surface)
+								 float_t shoulder_radius, float_t dz, float_t wz, float_t probe_radius, float_t ring_raduis, float_t top_surface, float_t probe_surface)
 {
 	unsigned int pidx = blockIdx.x * blockDim.x + threadIdx.x;
 	if (pidx >= particles.N || particles.blanked[pidx] == 1. || particles.tool_particle[pidx] == 1.)
@@ -781,7 +781,7 @@ __global__ void do_contact_froce(particle_gpu particles, float_t dt,
 	}
 
 	// Under shoulder
-	if ( p_radius < shoulder_radius  && p_radius > probe_raduis  && pi.z > shoulder_surface && pi.z < shoulder_surface + dz)
+	if ( p_radius < shoulder_radius  && p_radius > probe_radius  && pi.z > shoulder_surface && pi.z < shoulder_surface + dz)
 	{
 		float3_t normal = {0.0, 0.0, 1.0};
 		particles.n[pidx] = normal;
@@ -881,18 +881,18 @@ __global__ void do_contact_froce(particle_gpu particles, float_t dt,
 
 	}
 	// center raduis of the shoulder
-	float_t centerShoulderRadis = (shoulder_radius + probe_raduis) / 2.0;
+	float_t centerShoulderRadis = (shoulder_radius + probe_radius) / 2.0;
 
 	// Particle is penetrating the shoulder from inside
-	if (p_radius < centerShoulderRadis && p_radius > probe_raduis)
+	if (p_radius < centerShoulderRadis && p_radius > probe_radius)
 	{
 		float3_t normal = {pi.x / p_radius, pi.y / p_radius, 0.0};
 		particles.n[pidx] = normal;
 
-		float_t gN = p_radius - probe_raduis;
+		float_t gN = p_radius - probe_radius;
 
 		vec3_t w(0.0, 0.0, wz);
-		vec3_t r(probe_raduis * normal.x, probe_raduis * normal.y, 0.0);
+		vec3_t r(probe_radius * normal.x, probe_radius * normal.y, 0.0);
 		vec3_t vm = glm::cross(w, r);
 		vm.z = shoulder_velocity;
 
