@@ -831,7 +831,7 @@ __global__ void do_contact_froce(particle_gpu particles, float_t dt,
 	}
 
 	// under the probe
-/* 	if(p_radius <= probe_radius && pi.z > probe_surface)
+ 	if(p_radius <= probe_radius && pi.z > probe_surface)
 	{
 		float3_t normal = {0.0, 0.0, 1.0};
 		particles.n[pidx] = normal;
@@ -880,7 +880,6 @@ __global__ void do_contact_froce(particle_gpu particles, float_t dt,
 		}
 
 	}
-	 */
 	// center raduis of the shoulder
 	float_t centerShoulderRadis = (shoulder_radius + probe_raduis) / 2.0;
 
@@ -1096,8 +1095,8 @@ void actions_move_tool_particles(particle_gpu *particles, tool_3d_gpu *tool)
 		global_shoulder_velocity = -global_shoulder_velocity; // Reverse the direction of velocity
 	}
 	global_shoulder_contact_surface += global_shoulder_velocity * global_time_dt;
-
 	global_shoulder_contact_surface += -1.25 * global_shoulder_velocity * global_time_dt;
+
 	do_move_tool_particles<<<dG, dB>>>(*particles, global_shoulder_velocity, global_wz, global_time_dt);
 	cudaThreadSynchronize();
 }
