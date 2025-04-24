@@ -275,7 +275,7 @@ particle_gpu *setup_RFSSW(int nbox, grid_base **grid)
 			fixed[i] = 1;
 		}
 
-		// shoulder
+		// shoulder 2
 		if (pos[i].z > back_plate_hight + wp_thickness && radius <= shoulder_outer_diameter / 2.0)
 		{
 			glm::vec3 r(pos[i].x, pos[i].y, 0.0);
@@ -284,20 +284,10 @@ particle_gpu *setup_RFSSW(int nbox, grid_base **grid)
 
 			tool_p[i] = 1.0;
 			rho[i] = steel_rho;
+			fixed[i] = 2;
 		}
 
-		// ring
-		if (pos[i].z > back_plate_hight + wp_thickness && radius > shoulder_outer_diameter / 2.0)
-		{
-
-			vel[i] = {0.,0., 0.0};
-
-			tool_p[i] = 1.0;
-			rho[i] = steel_rho;
-			fixed[i] = 1;
-		}
-
-		// probe
+		// probe 3
 		if (pos[i].z > back_plate_hight + wp_thickness && radius <= probe_diameter / 2.0)
 		{
 
@@ -307,7 +297,20 @@ particle_gpu *setup_RFSSW(int nbox, grid_base **grid)
 
 			tool_p[i] = 1.0;
 			rho[i] = steel_rho;
+			fixed[i] = 3;
 		}
+
+		// ring 4
+		if (pos[i].z > back_plate_hight + wp_thickness && radius > shoulder_outer_diameter / 2.0)
+		{
+
+			vel[i] = {0.,0., 0.0};
+
+			tool_p[i] = 1.0;
+			rho[i] = steel_rho;
+			fixed[i] = 4;
+		}
+	
 	}
 
 	for (int i = 0; i < n; i++)

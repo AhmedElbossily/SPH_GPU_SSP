@@ -81,7 +81,7 @@ __global__ void do_move_tool_particles(particle_gpu particles, float_t vel_z, fl
 		return;
 	}
 
-	if (particles.fixed[pidx] == 0.)
+	if (particles.fixed[pidx] == 2.)
 	{
 		float_t px;
 		float_t py;
@@ -97,6 +97,24 @@ __global__ void do_move_tool_particles(particle_gpu particles, float_t vel_z, fl
 		particles.vel[pidx].x = v.x;
 		particles.vel[pidx].y = v.y;
 		particles.vel[pidx].z = vel_z;
+	}
+
+	if (particles.fixed[pidx] == 3.)
+	{
+		float_t px;
+		float_t py;
+		updatePosition(particles.pos[pidx].x, particles.pos[pidx].y, gwz, dt, px, py);
+		particles.pos[pidx].x = px;
+		particles.pos[pidx].y = py;
+		particles.pos[pidx].z += vel_z * dt;
+
+		glm::vec3 r(px, py, 0.0);
+		glm::vec3 w(0, 0, gwz);
+		glm::vec3 v = glm::cross(w, r);
+
+		particles.vel[pidx].x = v.x;
+		particles.vel[pidx].y = v.y;
+		particles.vel[pidx].z = -1.25 * vel_z;
 	}
 }
 
@@ -561,7 +579,7 @@ __global__ void do_boundary_conditions(particle_gpu particles)
 	if (particles.tool_particle[pidx] == 1.)
 		return;
 
-	if (particles.fixed[pidx])
+	if (particles.fixed[pidx] ==1)
 	{
 		particles.vel[pidx].x = particles.vel_bc[pidx].x;
 		particles.vel[pidx].y = particles.vel_bc[pidx].y;
