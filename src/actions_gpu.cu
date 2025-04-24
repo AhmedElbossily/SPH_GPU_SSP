@@ -106,7 +106,7 @@ __global__ void do_move_tool_particles(particle_gpu particles, float_t vel_z, fl
 		updatePosition(particles.pos[pidx].x, particles.pos[pidx].y, gwz, dt, px, py);
 		particles.pos[pidx].x = px;
 		particles.pos[pidx].y = py;
-		particles.pos[pidx].z += vel_z * dt;
+		particles.pos[pidx].z += -1.25 * vel_z * dt;
 
 		glm::vec3 r(px, py, 0.0);
 		glm::vec3 w(0, 0, gwz);
