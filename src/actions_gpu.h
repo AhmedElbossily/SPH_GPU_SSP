@@ -40,6 +40,7 @@ extern int global_time_step;
 extern float_t global_wz ;
 extern float_t global_shoulder_velocity;
 extern float_t global_shoulder_contact_surface;
+extern float_t  global_probe_contact_surface;
 extern float_t global_top_surface;
 
 extern float_t global_Vsf;
