@@ -996,7 +996,7 @@ void contact_force(particle_gpu *particles)
 	const unsigned int block_size = BLOCK_SIZE;
 	dim3 dG((particles->N + block_size - 1) / block_size);
 	dim3 dB(block_size);
-	do_contact_froce<<<dG, dB>>>(*particles, global_time_dt, global_shoulder_contact_surface, global_shoulder_velocity, global_shoulder_raduis, global_dz, global_wz, global_probe_raduis, global_ring_raduis, global_top_surface, global_shoulder_contact_surface);
+	do_contact_froce<<<dG, dB>>>(*particles, global_time_dt, global_shoulder_contact_surface, global_shoulder_velocity, global_shoulder_raduis, global_dz, global_wz, global_probe_raduis, global_ring_raduis, global_top_surface, global_probe_contact_surface);
 	check_cuda_error("After material_eos\n");
 }
 
