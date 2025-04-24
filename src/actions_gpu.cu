@@ -1096,7 +1096,7 @@ void actions_move_tool_particles(particle_gpu *particles, tool_3d_gpu *tool)
 		global_shoulder_velocity = -global_shoulder_velocity; // Reverse the direction of velocity
 	}
 	global_shoulder_contact_surface += global_shoulder_velocity * global_time_dt;
-	global_shoulder_contact_surface += -1.25 * global_shoulder_velocity * global_time_dt;
+	global_probe_contact_surface += -1.25 * global_shoulder_velocity * global_time_dt;
 
 	do_move_tool_particles<<<dG, dB>>>(*particles, global_shoulder_velocity, global_wz, global_time_dt);
 	cudaThreadSynchronize();
