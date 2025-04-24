@@ -305,7 +305,6 @@ particle_gpu *setup_RFSSW(int nbox, grid_base **grid)
 		{
 
 			vel[i] = {0.,0., 0.0};
-
 			tool_p[i] = 1.0;
 			rho[i] = steel_rho;
 			fixed[i] = 4;
@@ -319,6 +318,7 @@ particle_gpu *setup_RFSSW(int nbox, grid_base **grid)
 		{
 			global_shoulder_contact_surface = std::max(global_shoulder_contact_surface, pos[i].z);
 			global_top_surface = global_shoulder_contact_surface;
+			global_probe_contact_surface = global_shoulder_contact_surface;
 		}
 	}
 

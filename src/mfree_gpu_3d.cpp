@@ -59,6 +59,7 @@ float_t global_shoulder_raduis = 0.0;
 float_t global_ring_raduis = 0.0;
 float_t global_probe_raduis = 0.0;
 float_t global_top_surface = 0.0;
+float_t global_probe_contact_surface = 0.0;
 
 
 int poll_temp()
