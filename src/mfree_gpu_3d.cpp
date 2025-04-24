@@ -240,8 +240,8 @@ int main(int argc, char *argv[])
 			float_t time_left = seconds_so_far / percent_done * 100;
 			int temp = 0;
 
-			printf("%06d of %06d: %02.1f percent done, %.2f of est runtime %.2f, at temp %d\n",
-				   step, last_step, percent_done, seconds_so_far, time_left, temp);
+			printf("%06d of %06d: %02.1f percent done, %.2f sec of est runtime %.2f hr, at temp %d\n",
+				   step, last_step, percent_done, seconds_so_far, time_left/3600., temp);
 
 			// write forces on tool (if any)
 			if (global_tool_forces != 0)

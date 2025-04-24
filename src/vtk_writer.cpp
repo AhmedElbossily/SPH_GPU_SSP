@@ -100,7 +100,7 @@ void report_temp(float_t *h_temp, float4_t *h_pos, float_t *h_blanked, float_t *
 
 void vtk_writer_write_blanking() {
 	char buf[256];
-	sprintf(buf, "results/vtk_bbox_%06d.vtk", global_time_step);
+	sprintf(buf, "results/vtk_bbox_%09d.vtk", global_time_step);
 	FILE *fp = fopen(buf, "w+");
 
 	vec3_t bbmin, bbmax;
@@ -231,7 +231,7 @@ void vtk_writer_write(particle_gpu *particles) {
 	}
 
 	char buf[256];
-	sprintf(buf, "results/vtk_out_%06d.vtk", global_time_step);
+	sprintf(buf, "results/vtk_out_%09d.vtk", global_time_step);
 	FILE *fp = fopen(buf, "w+");
 
 	fprintf(fp, "# vtk DataFile Version 2.0\n");
@@ -351,7 +351,7 @@ void vtk_writer_write(tool_3d_gpu *tool, char filename[256]) {		// write tool, b
 	unsigned int npos  = positions.size();					// number of positions
 
 	char buf[256];
-	sprintf(buf, "%s_%06d.vtk", filename, global_time_step);
+	sprintf(buf, "%s_%09d.vtk", filename, global_time_step);
 	FILE *fp = fopen(buf, "w+");
 
 	fprintf(fp, "# vtk DataFile Version 2.0\n");
@@ -397,7 +397,7 @@ void vtk_writer_write_unified(std::vector<tool_3d_gpu *> tools, char filename[25
 	}
 
 	char buf[256];
-	sprintf(buf, "%s_%06d.vtk", filename, global_time_step);
+	sprintf(buf, "%s_%09d.vtk", filename, global_time_step);
 	FILE *fp = fopen(buf, "w+");
 
 	fprintf(fp, "# vtk DataFile Version 2.0\n");

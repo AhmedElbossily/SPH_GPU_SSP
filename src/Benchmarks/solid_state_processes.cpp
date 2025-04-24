@@ -237,7 +237,7 @@ particle_gpu *setup_RFSSW(int nbox, grid_base **grid)
 		}
 		else
 		{
-			generate_circular_points_hollow(ring_outer_diameter, shoulder_inner_diameter, dz, zz, points);
+			generate_circular_points_hollow(ring_outer_diameter, 0, dz, zz, points);
 		}
 		zz += dz;
 	}
@@ -295,6 +295,18 @@ particle_gpu *setup_RFSSW(int nbox, grid_base **grid)
 			tool_p[i] = 1.0;
 			rho[i] = steel_rho;
 			fixed[i] = 1;
+		}
+
+		// probe
+		if (pos[i].z > back_plate_hight + wp_thickness && radius <= probe_diameter / 2.0)
+		{
+
+			glm::vec3 r(pos[i].x, pos[i].y, 0.0);
+			glm::vec3 v = glm::cross(w, r);
+			vel[i] = {v.x, v.y, 0.0};
+
+			tool_p[i] = 1.0;
+			rho[i] = steel_rho;
 		}
 	}
 
