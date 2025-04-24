@@ -713,7 +713,8 @@ __device__ void calculate_contact_force(bool &is_sticking, vec3_t &fN, vec3_t &f
 
 __global__ void do_contact_froce(particle_gpu particles, float_t dt,
 								 float_t shoulder_surface, float_t shoulder_velocity,
-								 float_t shoulder_radius, float_t dz, float_t wz, float_t probe_radius, float_t ring_raduis, float_t top_surface, float_t probe_surface)
+								 float_t shoulder_radius, float_t dz, float_t wz, float_t probe_radius, 
+								 float_t ring_raduis, float_t top_surface, float_t probe_surface)
 {
 	unsigned int pidx = blockIdx.x * blockDim.x + threadIdx.x;
 	if (pidx >= particles.N || particles.blanked[pidx] == 1. || particles.tool_particle[pidx] == 1.)
@@ -836,7 +837,7 @@ __global__ void do_contact_froce(particle_gpu particles, float_t dt,
 		float3_t normal = {0.0, 0.0, 1.0};
 		particles.n[pidx] = normal;
 
-		float_t gN = probe_surface - pi.z;
+		float_t gN = pi.z - probe_surface; 
 
 		vec3_t w(0.0, 0.0, wz);
 		vec3_t r(pi.x, pi.y, 0.0);
