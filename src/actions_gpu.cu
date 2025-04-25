@@ -281,7 +281,7 @@ __global__ void do_material_fric_heat_gen(const float_t *__restrict__ blanked, c
 	}
 
 	// compute v_rel
-	float3_t normal = n[pidx];
+	vec3_t normal = n[pidx];
 	float4_t v_particle = vel[pidx];
 	float3_t v_diff = make_float3_t(v_particle.x - vel_tool.x, v_particle.y - vel_tool.y, v_particle.z - vel_tool.z);
 
@@ -649,7 +649,7 @@ __global__ void do_blanking(particle_gpu particles, float_t vel_max_squared, vec
 	}
 }
 
-__device__ void kirk_contact_force(vec3_t &fN_each, float_t pd, float3_t vij, float3_t nav, float_t dt, float_t p_temp)
+__device__ void kirk_contact_force(vec3_t &fN_each, float_t pd, float3_t vij, vec3_t nav, float_t dt, float_t p_temp)
 {
 	float_t DFAC = 0.2;
 
@@ -746,8 +746,8 @@ __global__ void do_contact_froce(particle_gpu particles, float_t dt,
 	// under the fixed ring
 	if (p_radius > shoulder_radius && pi.z > top_surface)
 	{
-		float3_t normal = {0.0, 0.0, 1.0};
-		particles.n[pidx] = normal;
+		vec3_t normal = {0.0, 0.0, 1.0};
+		
 		float_t gN = pi.z - top_surface;
 		vec3_t w(0.0, 0.0, 0.0);
 		vec3_t r(pi.x, pi.y, 0.0);
@@ -761,7 +761,9 @@ __global__ void do_contact_froce(particle_gpu particles, float_t dt,
 		float_t v_rel_mag = sqrtf(v_relative.x * v_relative.x + v_relative.y * v_relative.y + v_relative.z * v_relative.z);
 		// Compute normal contact force
 		kirk_contact_force(fN, gN, v_diff, normal, dt, p_temp);
+		
 		// Compute tangential contact force
+
 		vec3_t v_relative_vec = {v_relative.x, v_relative.y, v_relative.z};
 		vec3_t kdeltae = contact_alpha * physics.mass * v_relative_vec / dt;
 		vec3_t fstar = fricold - kdeltae;
@@ -784,8 +786,8 @@ __global__ void do_contact_froce(particle_gpu particles, float_t dt,
 	// Under shoulder
 	if ( p_radius < shoulder_radius  && p_radius > probe_radius  && pi.z > shoulder_surface && pi.z < shoulder_surface + dz)
 	{
-		float3_t normal = {0.0, 0.0, 1.0};
-		particles.n[pidx] = normal;
+		vec3_t normal = {0.0, 0.0, 1.0};
+		
 
 		float_t gN = pi.z - shoulder_surface;
 
@@ -834,8 +836,8 @@ __global__ void do_contact_froce(particle_gpu particles, float_t dt,
 	// under the probe
  	if(p_radius <= probe_radius && pi.z > probe_surface)
 	{
-		float3_t normal = {0.0, 0.0, 1.0};
-		particles.n[pidx] = normal;
+		vec3_t normal = {0.0, 0.0, 1.0};
+		
 
 		float_t gN = pi.z - probe_surface; 
 
@@ -887,8 +889,8 @@ __global__ void do_contact_froce(particle_gpu particles, float_t dt,
 	// Particle is penetrating the shoulder from inside
 	if (p_radius < centerShoulderRadis && p_radius > probe_radius)
 	{
-		float3_t normal = {pi.x / p_radius, pi.y / p_radius, 0.0};
-		particles.n[pidx] = normal;
+		vec3_t normal = {pi.x / p_radius, pi.y / p_radius, 0.0};
+		
 
 		float_t gN = p_radius - probe_radius;
 
@@ -937,8 +939,8 @@ __global__ void do_contact_froce(particle_gpu particles, float_t dt,
 	// Particle is penetrating the shoulder from outside
 	if (p_radius > centerShoulderRadis && p_radius < shoulder_radius)
 	{
-		float3_t normal = {-pi.x / p_radius, -pi.y / p_radius, 0.0};
-		particles.n[pidx] = normal;
+		vec3_t normal = {-pi.x / p_radius, -pi.y / p_radius, 0.0};
+		
 		float_t gN = shoulder_radius - p_radius;
 		vec3_t w(0.0, 0.0, wz);
 		vec3_t r(shoulder_radius * normal.x, shoulder_radius * normal.y, 0.0);

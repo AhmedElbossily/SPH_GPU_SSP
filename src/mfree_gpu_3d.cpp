@@ -95,12 +95,12 @@ int main(int argc, char *argv[])
 {
 
 	// Set CUDA_VISIBLE_DEVICES to select the third GPU
-    if (setenv("CUDA_VISIBLE_DEVICES", "3", 1) != 0)
+    if (setenv("CUDA_VISIBLE_DEVICES", "2", 1) != 0)
     {
         perror("Failed to set CUDA_VISIBLE_DEVICES");
         return -1;
     }
-    printf("CUDA_VISIBLE_DEVICES set to 3\n");
+    printf("CUDA_VISIBLE_DEVICES set to 2\n");
 
     // Redirect stdout to a file
     //freopen("output.txt", "w", stdout);
