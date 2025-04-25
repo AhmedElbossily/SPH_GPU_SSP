@@ -281,7 +281,7 @@ __global__ void do_material_fric_heat_gen(const float_t *__restrict__ blanked, c
 	}
 
 	// compute v_rel
-	vec3_t normal = n[pidx];
+	float3_t normal = n[pidx];
 	float4_t v_particle = vel[pidx];
 	float3_t v_diff = make_float3_t(v_particle.x - vel_tool.x, v_particle.y - vel_tool.y, v_particle.z - vel_tool.z);
 
