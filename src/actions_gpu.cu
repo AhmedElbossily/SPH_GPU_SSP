@@ -649,7 +649,7 @@ __global__ void do_blanking(particle_gpu particles, float_t vel_max_squared, vec
 	}
 }
 
-__device__ void kirk_contact_force(vec3_t &fN_each, float_t pd, float3_t vij, vec3_t nav, float_t dt, float_t p_temp)
+__device__ void kirk_contact_force(vec3_t &fN_each, float_t pd, vec3_t vij, vec3_t nav, float_t dt, float_t p_temp)
 {
 	float_t DFAC = 0.2;
 
@@ -755,7 +755,7 @@ __global__ void do_contact_froce(particle_gpu particles, float_t dt,
 		vm.z = 0.0;
 		// Compute relative velocity
 		float4_t v_particle = particles.vel[pidx];
-		float3_t v_diff = make_float3_t(v_particle.x - vm.x, v_particle.y - vm.y, v_particle.z - vm.z);
+		vec3_t v_diff (v_particle.x - vm.x, v_particle.y - vm.y, v_particle.z - vm.z);
 		float_t v_diff_dot_normal = v_diff.x * normal.x + v_diff.y * normal.y + v_diff.z * normal.z;
 		float3_t v_relative = make_float3_t(v_diff.x - v_diff_dot_normal * normal.x, v_diff.y - v_diff_dot_normal * normal.y, v_diff.z - v_diff_dot_normal * normal.z);
 		float_t v_rel_mag = sqrtf(v_relative.x * v_relative.x + v_relative.y * v_relative.y + v_relative.z * v_relative.z);
@@ -799,7 +799,7 @@ __global__ void do_contact_froce(particle_gpu particles, float_t dt,
 		// Compute relative velocity
 		float4_t v_particle = particles.vel[pidx];
 
-		float3_t v_diff = make_float3_t(v_particle.x - vm.x, v_particle.y - vm.y, v_particle.z - vm.z);
+		vec3_t v_diff (v_particle.x - vm.x, v_particle.y - vm.y, v_particle.z - vm.z);
 
 		float_t v_diff_dot_normal = v_diff.x * normal.x + v_diff.y * normal.y + v_diff.z * normal.z;
 
@@ -849,7 +849,7 @@ __global__ void do_contact_froce(particle_gpu particles, float_t dt,
 		// Compute relative velocity
 		float4_t v_particle = particles.vel[pidx];
 
-		float3_t v_diff = make_float3_t(v_particle.x - vm.x, v_particle.y - vm.y, v_particle.z - vm.z);
+		vec3_t v_diff (v_particle.x - vm.x, v_particle.y - vm.y, v_particle.z - vm.z);
 
 		float_t v_diff_dot_normal = v_diff.x * normal.x + v_diff.y * normal.y + v_diff.z * normal.z;
 
@@ -902,7 +902,7 @@ __global__ void do_contact_froce(particle_gpu particles, float_t dt,
 		// Compute relative velocity
 		float4_t v_particle = particles.vel[pidx];
 
-		float3_t v_diff = make_float3_t(v_particle.x - vm.x, v_particle.y - vm.y, v_particle.z - vm.z);
+		vec3_t v_diff (v_particle.x - vm.x, v_particle.y - vm.y, v_particle.z - vm.z);
 
 		float_t v_diff_dot_normal = v_diff.x * normal.x + v_diff.y * normal.y + v_diff.z * normal.z;
 
@@ -948,7 +948,7 @@ __global__ void do_contact_froce(particle_gpu particles, float_t dt,
 		vm.z = shoulder_velocity;
 		// Compute relative velocity
 		float4_t v_particle = particles.vel[pidx];
-		float3_t v_diff = make_float3_t(v_particle.x - vm.x, v_particle.y - vm.y, v_particle.z - vm.z);
+		vec3_t v_diff (v_particle.x - vm.x, v_particle.y - vm.y, v_particle.z - vm.z);
 		float_t v_diff_dot_normal = v_diff.x * normal.x + v_diff.y * normal.y + v_diff.z * normal.z;
 		float3_t v_relative = make_float3_t(v_diff.x - v_diff_dot_normal * normal.x, v_diff.y - v_diff_dot_normal * normal.y, v_diff.z - v_diff_dot_normal * normal.z);
 		float_t v_rel_mag = sqrtf(v_relative.x * v_relative.x + v_relative.y * v_relative.y + v_relative.z * v_relative.z);
