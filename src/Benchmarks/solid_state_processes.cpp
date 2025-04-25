@@ -153,6 +153,8 @@ particle_gpu *setup_RFSSW(int nbox, grid_base **grid)
 	// BC
 	global_shoulder_velocity = -1.25 * global_Vsf;
 	float_t probe_plunging_speed = -1.25 * global_shoulder_velocity; // 1.25 volume conservation
+	global_rtf = -1.25;
+
 	global_wz = 2700 * 0.104719755 * global_Vsf;
 	glm::vec3 w(0.0, 0.0, global_wz);
 

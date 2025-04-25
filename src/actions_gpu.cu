@@ -70,7 +70,7 @@ __global__ void do_material_eos(const float_t *__restrict__ blanked, const float
 	p[pidx] = c0 * c0 * (rhoi - rho0);
 }
 
-__global__ void do_move_tool_particles(particle_gpu particles, float_t vel_z, float_t gwz, float_t dt)
+__global__ void do_move_tool_particles(particle_gpu particles, float_t vel_z, float_t gwz, float_t dt, float_t rtf)
 {
 	unsigned int pidx = blockIdx.x * blockDim.x + threadIdx.x;
 	if (pidx >= particles.N_init)
@@ -106,7 +106,7 @@ __global__ void do_move_tool_particles(particle_gpu particles, float_t vel_z, fl
 		updatePosition(particles.pos[pidx].x, particles.pos[pidx].y, gwz, dt, px, py);
 		particles.pos[pidx].x = px;
 		particles.pos[pidx].y = py;
-		particles.pos[pidx].z += -1.25 * vel_z * dt;
+		particles.pos[pidx].z += rtf * vel_z * dt;
 
 		glm::vec3 r(px, py, 0.0);
 		glm::vec3 w(0, 0, gwz);
@@ -114,7 +114,7 @@ __global__ void do_move_tool_particles(particle_gpu particles, float_t vel_z, fl
 
 		particles.vel[pidx].x = v.x;
 		particles.vel[pidx].y = v.y;
-		particles.vel[pidx].z = -1.25 * vel_z;
+		particles.vel[pidx].z = rtf * vel_z;
 	}
 }
 
@@ -714,7 +714,7 @@ __device__ void calculate_contact_force(bool &is_sticking, vec3_t &fN, vec3_t &f
 __global__ void do_contact_froce(particle_gpu particles, float_t dt,
 								 float_t shoulder_surface, float_t shoulder_velocity,
 								 float_t shoulder_radius, float_t dz, float_t wz, float_t probe_radius, 
-								 float_t ring_raduis, float_t top_surface, float_t probe_surface)
+								 float_t ring_raduis, float_t top_surface, float_t probe_surface, float_t rtf)
 {
 	unsigned int pidx = blockIdx.x * blockDim.x + threadIdx.x;
 	if (pidx >= particles.N || particles.blanked[pidx] == 1. || particles.tool_particle[pidx] == 1.)
@@ -832,7 +832,7 @@ __global__ void do_contact_froce(particle_gpu particles, float_t dt,
 	}
 
 	// under the probe
- 	if(p_radius <= probe_radius && pi.z > probe_surface)
+ 	if(p_radius <= probe_radius && pi.z > probe_surface) 
 	{
 		float3_t normal = {0.0, 0.0, 1.0};
 		particles.n[pidx] = normal;
@@ -842,7 +842,7 @@ __global__ void do_contact_froce(particle_gpu particles, float_t dt,
 		vec3_t w(0.0, 0.0, wz);
 		vec3_t r(pi.x, pi.y, 0.0);
 		vec3_t vm = glm::cross(w, r);
-		vm.z = -1.25 * shoulder_velocity;
+		vm.z = rtf * shoulder_velocity;
 
 		// Compute relative velocity
 		float4_t v_particle = particles.vel[pidx];
@@ -885,7 +885,7 @@ __global__ void do_contact_froce(particle_gpu particles, float_t dt,
 	float_t centerShoulderRadis = (shoulder_radius + probe_radius) / 2.0;
 
 	// Particle is penetrating the shoulder from inside
-	if (p_radius < centerShoulderRadis && p_radius > probe_radius)
+	if (p_radius < centerShoulderRadis && p_radius > probe_radius && pi.z > shoulder_surface + dz)
 	{
 		float_t normal_mag = sqrtf(pi.x * pi.x + pi.y * pi.y);
 		float3_t normal = {pi.x / normal_mag, pi.y / normal_mag, 0.0};
@@ -936,7 +936,7 @@ __global__ void do_contact_froce(particle_gpu particles, float_t dt,
 	}
 
 	// Particle is penetrating the shoulder from outside
-	if (p_radius > centerShoulderRadis && p_radius < shoulder_radius)
+	if (p_radius > centerShoulderRadis && p_radius < shoulder_radius && pi.z > shoulder_surface + dz)
 	{
 
 		float_t normal_mag = sqrtf(pi.x * pi.x + pi.y * pi.y);
@@ -1000,7 +1000,7 @@ void contact_force(particle_gpu *particles)
 	const unsigned int block_size = BLOCK_SIZE;
 	dim3 dG((particles->N + block_size - 1) / block_size);
 	dim3 dB(block_size);
-	do_contact_froce<<<dG, dB>>>(*particles, global_time_dt, global_shoulder_contact_surface, global_shoulder_velocity, global_shoulder_raduis, global_dz, global_wz, global_probe_raduis, global_ring_raduis, global_top_surface, global_probe_contact_surface);
+	do_contact_froce<<<dG, dB>>>(*particles, global_time_dt, global_shoulder_contact_surface, global_shoulder_velocity, global_shoulder_raduis, global_dz, global_wz, global_probe_raduis, global_ring_raduis, global_top_surface, global_probe_contact_surface, global_rtf);
 	check_cuda_error("After material_eos\n");
 }
 
@@ -1099,9 +1099,9 @@ void actions_move_tool_particles(particle_gpu *particles, tool_3d_gpu *tool)
 		global_shoulder_velocity = -global_shoulder_velocity; // Reverse the direction of velocity
 	}
 	global_shoulder_contact_surface += global_shoulder_velocity * global_time_dt;
-	global_probe_contact_surface += -1.25 * global_shoulder_velocity * global_time_dt;
+	global_probe_contact_surface += global_rtf * global_shoulder_velocity * global_time_dt;
 
-	do_move_tool_particles<<<dG, dB>>>(*particles, global_shoulder_velocity, global_wz, global_time_dt);
+	do_move_tool_particles<<<dG, dB>>>(*particles, global_shoulder_velocity, global_wz, global_time_dt, global_rtf);
 	cudaThreadSynchronize();
 }
 
