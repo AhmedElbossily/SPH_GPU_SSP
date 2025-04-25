@@ -764,7 +764,7 @@ __global__ void do_contact_froce(particle_gpu particles, float_t dt,
 		
 		// Compute tangential contact force
 
-		vec3_t v_relative_vec = {v_relative.x, v_relative.y, v_relative.z};
+		vec3_t v_relative_vec = v_diff - v_diff * normal;
 		vec3_t kdeltae = contact_alpha * physics.mass * v_relative_vec / dt;
 		vec3_t fstar = fricold - kdeltae;
 		float_t fstar_mag = glm::length(fstar);
@@ -811,7 +811,7 @@ __global__ void do_contact_froce(particle_gpu particles, float_t dt,
 		kirk_contact_force(fN, gN, v_diff, normal, dt, p_temp);
 
 		// Compute tangential contact force
-		vec3_t v_relative_vec = {v_relative.x, v_relative.y, v_relative.z};
+		vec3_t v_relative_vec = v_diff - v_diff * normal;
 		vec3_t kdeltae = contact_alpha * physics.mass * v_relative_vec / dt;
 		vec3_t fstar = fricold - kdeltae;
 		float_t fstar_mag = glm::length(fstar);
@@ -861,7 +861,7 @@ __global__ void do_contact_froce(particle_gpu particles, float_t dt,
 		kirk_contact_force(fN, gN, v_diff, normal, dt, p_temp);
 
 		// Compute tangential contact force
-		vec3_t v_relative_vec = {v_relative.x, v_relative.y, v_relative.z};
+		vec3_t v_relative_vec = v_diff - v_diff * normal;
 		vec3_t kdeltae = contact_alpha * physics.mass * v_relative_vec / dt;
 		vec3_t fstar = fricold - kdeltae;
 		float_t fstar_mag = glm::length(fstar);
@@ -914,7 +914,7 @@ __global__ void do_contact_froce(particle_gpu particles, float_t dt,
 		kirk_contact_force(fN, gN, v_diff, normal, dt, p_temp);
 
 		// Compute tangential contact force
-		vec3_t v_relative_vec = {v_relative.x, v_relative.y, v_relative.z};
+		vec3_t v_relative_vec = v_diff - v_diff * normal;
 		vec3_t kdeltae = contact_alpha * physics.mass * v_relative_vec / dt;
 		vec3_t fstar = fricold - kdeltae;
 		float_t fstar_mag = glm::length(fstar);
@@ -955,7 +955,7 @@ __global__ void do_contact_froce(particle_gpu particles, float_t dt,
 		// Compute normal contact force
 		kirk_contact_force(fN, gN, v_diff, normal, dt, p_temp);
 		// Compute tangential contact force
-		vec3_t v_relative_vec = {v_relative.x, v_relative.y, v_relative.z};
+		vec3_t v_relative_vec = v_diff - v_diff * normal;
 		vec3_t kdeltae = contact_alpha * physics.mass * v_relative_vec / dt;
 		vec3_t fstar = fricold - kdeltae;
 		float_t fstar_mag = glm::length(fstar);
