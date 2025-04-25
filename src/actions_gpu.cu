@@ -889,7 +889,8 @@ __global__ void do_contact_froce(particle_gpu particles, float_t dt,
 	// Particle is penetrating the shoulder from inside
 	if (p_radius < centerShoulderRadis && p_radius > probe_radius)
 	{
-		vec3_t normal = {pi.x / p_radius, pi.y / p_radius, 0.0};
+		float_t normal_mag = sqrtf(pi.x * pi.x + pi.y * pi.y);
+		vec3_t normal = {pi.x / normal_mag, pi.y / normal_mag, 0.0};
 		
 
 		float_t gN = p_radius - probe_radius;
@@ -939,11 +940,13 @@ __global__ void do_contact_froce(particle_gpu particles, float_t dt,
 	// Particle is penetrating the shoulder from outside
 	if (p_radius > centerShoulderRadis && p_radius < shoulder_radius)
 	{
-		vec3_t normal = {-pi.x / p_radius, -pi.y / p_radius, 0.0};
+		float_t normal_mag = sqrtf(pi.x * pi.x + pi.y * pi.y);
+		vec3_t normal = {-pi.x / normal_mag, -pi.y / normal_mag, 0.0};
 		
 		float_t gN = shoulder_radius - p_radius;
 		vec3_t w(0.0, 0.0, wz);
-		vec3_t r(shoulder_radius * normal.x, shoulder_radius * normal.y, 0.0);
+		vec3_t r(-shoulder_radius * normal.x, -shoulder_radius * normal.y, 0.0);
+
 		vec3_t vm = glm::cross(w, r);
 		vm.z = shoulder_velocity;
 		// Compute relative velocity
