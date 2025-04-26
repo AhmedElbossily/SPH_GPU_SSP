@@ -832,7 +832,7 @@ __global__ void do_contact_froce(particle_gpu particles, float_t dt,
 	}
 
 	// under the probe
- 	if(p_radius <= probe_radius && pi.z > probe_surface) 
+ 	/*if(p_radius <= probe_radius && pi.z > probe_surface) 
 	{
 		float3_t normal = {0.0, 0.0, 1.0};
 		particles.n[pidx] = normal;
@@ -880,9 +880,9 @@ __global__ void do_contact_froce(particle_gpu particles, float_t dt,
 			particles.T[pidx] += thermals_wp.eta * dt * fy * v_rel_mag / (thermals_wp.cp * physics.mass);
 		}
 
-	}
+	}*/
 	// center raduis of the shoulder
-	float_t centerShoulderRadis = (shoulder_radius + probe_radius) / 2.0;
+/*	float_t centerShoulderRadis = (shoulder_radius + probe_radius) / 2.0;
 
 	// Particle is penetrating the shoulder from inside
 	if (p_radius < centerShoulderRadis && p_radius > probe_radius && pi.z > shoulder_surface + dz)
@@ -973,7 +973,7 @@ __global__ void do_contact_froce(particle_gpu particles, float_t dt,
 			// Heat generation
 			particles.T[pidx] += thermals_wp.eta * dt * fy * v_rel_mag / (thermals_wp.cp * physics.mass);
 		}
-	}
+	}*/
 
 	// Update particle forces
 	particles.fc[pidx] = make_float3_t(fN.x, fN.y, fN.z);
