@@ -130,8 +130,8 @@ particle_gpu *setup_RFSSW(int nbox, grid_base **grid)
 	constexpr float_t hdx = 1.3;
 
 	// dimensions of the workpiece
-	constexpr float_t wp_width = 50.0;
-	constexpr float_t wp_length = 50.0;
+	constexpr float_t wp_width = 25.0;
+	constexpr float_t wp_length = 25.0;
 	constexpr float_t wp_thickness = 5.0 + 2. * dz;
 	constexpr float_t probe_diameter = 6.0;
 	global_probe_raduis = probe_diameter / 2.0;
@@ -150,7 +150,7 @@ particle_gpu *setup_RFSSW(int nbox, grid_base **grid)
 	int ny = static_cast<int>(wp_length / dz) + 1;
 
 	// BC
-	global_shoulder_velocity = -10000. * global_Vsf;
+	global_shoulder_velocity = -1.25 * global_Vsf;
 	float_t probe_plunging_speed = -1.25 * global_shoulder_velocity; // 1.25 volume conservation
 	global_wz = 2700 * 0.104719755 * global_Vsf;
 	glm::vec3 w(0.0, 0.0, global_wz);
@@ -193,7 +193,7 @@ particle_gpu *setup_RFSSW(int nbox, grid_base **grid)
 	corr.alpha = 1.;
 	corr.beta = 1.;
 	corr.eta = 0.1;
-	corr.xspheps = 0.5;
+	corr.xspheps = 0.01;
 	corr.stresseps = 0.3;
 	float_t h1 = 1. / (hdx * dz);
 	float_t q = dz * h1;
@@ -245,6 +245,7 @@ particle_gpu *setup_RFSSW(int nbox, grid_base **grid)
 	float_t lowest_point_z = find_lowest_point_z(points);
 
 	*grid = new grid_gpu_green(n, make_float3_t(-26., -26., -1.), make_float3_t(+26., +26., +30.), hdx * dz);
+	global_blanking = new blanking(vec3_t(-26., -26., -1.), vec3_t(+26., +26., +30.), vec3_t(0, 0., 0.), global_wz * global_shoulder_raduis * global_wz * global_shoulder_raduis *2.);
 
 	printf("calculating with %d\n", n);
 
@@ -271,6 +272,7 @@ particle_gpu *setup_RFSSW(int nbox, grid_base **grid)
 		if (pos[i].z == lowest_point_z)
 		{
 			fixed[i] = 1;
+			
 		}
 
 		if (pos[i].z > back_plate_hight + wp_thickness)
@@ -308,7 +310,7 @@ particle_gpu *setup_RFSSW(int nbox, grid_base **grid)
 	particle_gpu *particles = new particle_gpu(pos, vel, rho, T, h, fixed, tool_p, n);
 
 	global_time_dt = 1.565015e-08;
-	global_time_final = 1.e-5;
+	global_time_final = 0.1;
 
 	assert(check_cuda_error());
 	return particles;

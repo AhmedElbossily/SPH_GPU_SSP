@@ -322,37 +322,39 @@ __global__ void do_contmech_advection(const float_t *__restrict__ blanked, const
 
 	pos_t[pidx] = posi_t_new;
 }
-
 __global__ void do_invalidate_rate(particle_gpu particles) {
 	unsigned int pidx = blockIdx.x * blockDim.x + threadIdx.x;
 	if (pidx >= particles.N) return;
 
 	bool invalid = false;
 
-	invalid = invalid || isnaninf(particles.pos_t[pidx].x);
-	invalid = invalid || isnaninf(particles.pos_t[pidx].y);
-	invalid = invalid || isnaninf(particles.pos_t[pidx].z);
-
-	invalid = invalid || isnaninf(particles.vel_t[pidx].x);
-	invalid = invalid || isnaninf(particles.vel_t[pidx].y);
-	invalid = invalid || isnaninf(particles.vel_t[pidx].z);
-
-	invalid = invalid || isnaninf(particles.S_t[pidx][0][0]);
-	invalid = invalid || isnaninf(particles.S_t[pidx][1][1]);
-	invalid = invalid || isnaninf(particles.S_t[pidx][2][2]);
-
-	invalid = invalid || isnaninf(particles.S_t[pidx][0][1]);
-	invalid = invalid || isnaninf(particles.S_t[pidx][1][2]);
-	invalid = invalid || isnaninf(particles.S_t[pidx][2][0]);
-
-	invalid = invalid || isnaninf(particles.rho_t[pidx]);
-	invalid = invalid || isnaninf(particles.T_t[pidx]);
+	if (isnaninf(particles.pos_t[pidx].x) || isnaninf(particles.pos_t[pidx].y) || isnaninf(particles.pos_t[pidx].z)) {
+		printf("Particle tool %lf invalidated: invalid position\n", particles.tool_particle[pidx]);
+		invalid = true;
+	}
+	if (isnaninf(particles.vel_t[pidx].x) || isnaninf(particles.vel_t[pidx].y) || isnaninf(particles.vel_t[pidx].z)) {
+		printf("Particle tool %lf invalidated: invalid velocity\n", particles.tool_particle[pidx]);
+		invalid = true;
+	}
+	if (isnaninf(particles.S_t[pidx][0][0]) || isnaninf(particles.S_t[pidx][1][1]) || isnaninf(particles.S_t[pidx][2][2]) ||
+	    isnaninf(particles.S_t[pidx][0][1]) || isnaninf(particles.S_t[pidx][1][2]) || isnaninf(particles.S_t[pidx][2][0])) {
+		printf("Particle tool %lf invalidated: invalid stress tensor\n", particles.tool_particle[pidx]);
+		invalid = true;
+	}
+	if (isnaninf(particles.rho_t[pidx])) {
+		printf("Particle tool %lf invalidated: invalid density\n", particles.tool_particle[pidx]);
+		invalid = true;
+	}
+	if (isnaninf(particles.T_t[pidx])) {
+		printf("Particle tool %lf invalidated: invalid temperature\n", particles.tool_particle[pidx]);
+		invalid = true;
+	}
 
 	if (invalid) {
 		particles.blanked[pidx] = 1.;
-		printf("invalidated particle %d due to nan!\n", pidx);
 	}
 }
+
 
 __global__ void do_check_valid_full(particle_gpu particles) {
 	unsigned int pidx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -477,11 +479,12 @@ __global__ void do_boundary_conditions_thermal(particle_gpu particles) {
 	if (pidx >= particles.N) return;
 
 	if (particles.fixed[pidx] == 1.) {
-		particles.T[pidx] = thermals_wp.T_init;
+		//particles.T[pidx] = thermals_wp.T_init;
+		particles.T[pidx] = 150.;
 
-		if (thermals_wp.T_init == 0.) {
+		/* if (thermals_wp.T_init == 0.) {
 			printf("WARNING: set temp to zero due to boundary condition!\n");
-		}
+		} */
 	}
 }
 
@@ -554,7 +557,7 @@ __global__ void do_blanking(particle_gpu particles, float_t vel_max_squared, vec
 	}
 }
 
-__device__ void kirk_contact_force(vec3_t &fN_each, float_t pd, float3_t vij, float3_t nav, float_t dt, float_t p_temp)
+__device__ void kirk_contact_force(vec3_t &fN_each, float_t pd, vec3_t vij, vec3_t nav, float_t dt, float_t p_temp)
 {
 	float_t DFAC = 0.2;
 
@@ -566,7 +569,7 @@ __device__ void kirk_contact_force(vec3_t &fN_each, float_t pd, float3_t vij, fl
 	float_t dpN = vij.x * nav.x + vij.y * nav.y + vij.z * nav.z;
 
 	float_t kij = ((slave_mass * slave_mass) / (slave_mass + slave_mass)) * (PFAC / (dt * dt));
-	float_t cij = DFAC * (slave_mass + slave_mass) * sqrt_t((kij * (slave_mass + slave_mass)) / (slave_mass * slave_mass));
+	float_t cij = DFAC * (slave_mass + slave_mass) * sqrt((kij * (slave_mass + slave_mass)) / (slave_mass * slave_mass));
 
 	fN_each.x += -1. * (kij * pd + cij * dpN) * nav.x;
 	fN_each.y += -1. * (kij * pd + cij * dpN) * nav.y;
@@ -595,6 +598,14 @@ __device__ double sigma_yield_interaction(joco_constants jc, double eps_pl, doub
 	return Term_A * Term_B * Term_C;
 }
 
+__device__ float_t calculate_heat_generation(vec3_t fT_t, vec3_t vr, float_t eta, float_t dt, float_t cp, float_t mass)
+{
+	float_t f_fric_mag = sqrt(fT_t.x * fT_t.x + fT_t.y * fT_t.y + fT_t.z * fT_t.z);
+	float_t v_rel_mag = sqrt(vr.x * vr.x + vr.y * vr.y + vr.z * vr.z);
+	float_t T = (eta * dt * f_fric_mag * v_rel_mag) / (cp * mass);
+	return T;
+}
+
 __device__ void calculate_contact_force(bool &is_sticking, vec3_t &fN, vec3_t &fT, vec3_t &vr, vec3_t &fricold, float_t gN, vec3_t normal, vec3_t vs, float_t dt, float_t p_temp, float_t contact_alpha, float_t slave_mass, float_t friction_mu, float_t ffl, float_t cp, particle_gpu &particles, unsigned int pidx, float_t &T)
 {
 	vec3_t kdeltae = contact_alpha * slave_mass * vr / dt;
@@ -613,7 +624,8 @@ __device__ void calculate_contact_force(bool &is_sticking, vec3_t &fN, vec3_t &f
 
 		vec3_t fT_t = fy * (fstar / fstar_mag);
 		fT += fT_t;
-
+		if (!is_sticking)
+			T += calculate_heat_generation(fT_t, vr, thermals_wp.eta, dt, cp, physics.mass);
 	}
 }
 
@@ -636,60 +648,64 @@ __global__ void do_contact_froce(particle_gpu particles, float_t dt,
     float_t sigma_Y = sigma_yield_interaction(johnson_cook, eps_pl, eps_pl_dot, p_temp);
     float_t ffl = (sigma_Y / sqrtf(3.0)) * dz * dz;
 
-    vec3_t vs(particles.vel[pidx].x, particles.vel[pidx].y, particles.vel[pidx].z);
-    vec3_t fricold(particles.ft[pidx].x, particles.ft[pidx].y, particles.ft[pidx].z);
+	float_t gN = 0;
 
-    vec3_t fN = {0.0, 0.0, 0.0};
-    vec3_t fT = {0.0, 0.0, 0.0};
+	float_t contact_alpha = 0.05;
 
-    const float_t contact_alpha = 0.5;
-    const float_t friction_mu = 0.6;
+	float_t friction_mu = 0.6; // 0.4 was perfect
+
+	if (p_temp > johnson_cook.Tmelt)
+		friction_mu = 0.0;
+
+	float_t slave_mass = physics.mass;
+	vec3_t vs(particles.vel[pidx].x, particles.vel[pidx].y, particles.vel[pidx].z);
+	vec3_t fricold(particles.ft[pidx].x, particles.ft[pidx].y, particles.ft[pidx].z);
+
+	vec3_t fN(0., 0., 0.);
+	vec3_t fT(0., 0., 0.);
+	vec3_t vr(0., 0., 0.);
 
     // Under shoulder
     if (pi.z > shoulder_surface) {
-        float3_t normal = {0.0, 0.0, 1.0};
-        particles.n[pidx] = normal;
 
-        float_t gN = pi.z - shoulder_surface;
+		vec3_t normal(0., 0., 0.);
+		gN = abs(abs(shoulder_surface) - abs(pi.z));
+		normal.z = 1.;
 
+		vec3_t vm(0., 0., 0.);
 		vec3_t w(0.0, 0.0, wz);
 		vec3_t r(pi.x, pi.y, 0.0);
-		vec3_t vm = glm::cross(w, r);
-        vm.z = shoulder_velocity;
+		vm = glm::cross(w, r);
+		vm.z = shoulder_velocity;
 
-        // Compute relative velocity
-        float4_t v_particle = particles.vel[pidx];
+		vec3_t v = vs - vm;
+		vr = v - v * normal;
+		kirk_contact_force(fN, gN, v, normal, dt, p_temp);
 
-        float3_t v_diff = make_float3_t(v_particle.x - vm.x, v_particle.y - vm.y, v_particle.z - vm.z);
+		vec3_t kdeltae = contact_alpha * slave_mass * vr / dt;
+		float_t fy = friction_mu * glm::length(fN);
+		vec3_t fstar = fricold - kdeltae;
+		float_t fstar_mag = glm::length(fstar);
 
-        float_t v_diff_dot_normal = v_diff.x * normal.x + v_diff.y * normal.y + v_diff.z * normal.z;
+		bool is_sticking = false;
+		if (fstar_mag != 0)
+			{
+				if (fy > ffl)
+				{
+					fy = ffl;
+					is_sticking = true;
 
-        float3_t v_relative = make_float3_t(v_diff.x - v_diff_dot_normal * normal.x, v_diff.y - v_diff_dot_normal * normal.y, v_diff.z - v_diff_dot_normal * normal.z);
+					particles.vel[pidx].x = vm.x;
+					particles.vel[pidx].y = vm.y;
+					particles.vel[pidx].z = vm.z;
+				}
 
-        float_t v_rel_mag = sqrt_t(v_relative.x * v_relative.x + v_relative.y * v_relative.y + v_relative.z * v_relative.z);
-
-        // Compute normal contact force
-        kirk_contact_force(fN, gN, v_diff, normal, dt, p_temp);
-
-        // Compute tangential contact force
- 		vec3_t v_relative_vec = {v_relative.x, v_relative.y, v_relative.z};
-        vec3_t kdeltae = contact_alpha * physics.mass * v_relative_vec / dt;
-        vec3_t fstar = fricold - kdeltae;
-        float_t fstar_mag = glm::length(fstar);
-        float_t fy = friction_mu * glm::length(fN);
-
-        if (fstar_mag > 0.0f) {
-            if (fy > ffl) {
-                fy = ffl;
-                particles.vel[pidx] = make_float4_t(vm.x, vm.y, vm.z,0); // Stick to the shoulder velocity
-            }
-
-            vec3_t fT_t = fy * (fstar / fstar_mag);
-            fT += fT_t;
-
-            // Heat generation
-            particles.T[pidx] += thermals_wp.eta * dt * fy * v_rel_mag / (thermals_wp.cp * physics.mass);
-        } 
+				vec3_t fT_t = fy * fstar / fstar_mag;
+				fT += fT_t;
+				if (!is_sticking)
+					particles.T[pidx] += calculate_heat_generation(fT_t, vr, thermals_wp.eta, dt, thermals_wp.cp, physics.mass);
+			}
+        
     }
 
     // Update particle forces

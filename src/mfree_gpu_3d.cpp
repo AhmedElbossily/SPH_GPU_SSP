@@ -91,8 +91,25 @@ int poll_temp()
 int main(int argc, char *argv[])
 {
 
-	// Redirect stdout to a file
-    freopen("output.txt", "w", stdout);
+		// Set CUDA_VISIBLE_DEVICES to select the third GPU
+    if (setenv("CUDA_VISIBLE_DEVICES", "2", 1) != 0)
+    {
+        perror("Failed to set CUDA_VISIBLE_DEVICES");
+        return -1;
+    }
+    printf("CUDA_VISIBLE_DEVICES set to 2\n");
+
+    // Redirect stdout to a file
+    //freopen("output.txt", "w", stdout);
+
+    int device_id = 0; // After setting CUDA_VISIBLE_DEVICES, the selected GPU is indexed as 0
+    cudaError_t err = cudaSetDevice(device_id);
+    if (err != cudaSuccess)
+    {
+        printf("Failed to set device %d: %s\n", device_id, cudaGetErrorString(err));
+        return -1;
+    }
+    printf("Using GPU %d\n", device_id);
 
 	// init cuda resources
 	cudaFree(0);
