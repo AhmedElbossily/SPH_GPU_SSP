@@ -195,7 +195,7 @@ particle_gpu *setup_RFSSW(int nbox, grid_base **grid)
 	corr.alpha = 1.;
 	corr.beta = 1.;
 	corr.eta = 0.1;
-	corr.xspheps = 0.5;
+	corr.xspheps = 0.01;
 	corr.stresseps = 0.3;
 	float_t h1 = 1. / (hdx * dz);
 	float_t q = dz * h1;
