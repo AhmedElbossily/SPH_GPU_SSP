@@ -247,6 +247,7 @@ particle_gpu *setup_RFSSW(int nbox, grid_base **grid)
 	float_t lowest_point_z = find_lowest_point_z(points);
 
 	*grid = new grid_gpu_green(n, make_float3_t(-26., -26., -1.), make_float3_t(+26., +26., +30.), hdx * dz);
+	global_blanking = new blanking(vec3_t(-26., -26., -1.), vec3_t(+26., +26., +30.), vec3_t(0, 0., 0.), global_wz * global_shoulder_raduis * global_wz * global_shoulder_raduis *2.);
 
 	printf("calculating with %d\n", n);
 
@@ -338,7 +339,7 @@ particle_gpu *setup_RFSSW(int nbox, grid_base **grid)
 	particle_gpu *particles = new particle_gpu(pos, vel, rho, T, h, fixed, tool_p, n);
 
 	global_time_dt = 1.565015e-08;
-	global_time_final = 0.1;
+	global_time_final = 0.42;
 
 	assert(check_cuda_error());
 	return particles;

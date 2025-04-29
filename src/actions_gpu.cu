@@ -724,7 +724,7 @@ __global__ void do_contact_froce(particle_gpu particles, float_t dt,
 	float_t p_radius = sqrtf(pi.x * pi.x + pi.y * pi.y);
 
 	// Early exit for particles outside the shoulder radius or below the shoulder surface
-	if (p_radius > ring_raduis || pi.z < shoulder_surface)
+	if (p_radius > ring_raduis || pi.z <= shoulder_surface)
 		return;
 
 	// Precompute values
@@ -832,7 +832,7 @@ __global__ void do_contact_froce(particle_gpu particles, float_t dt,
 	}
 
 	// under the probe
- 	/*if(p_radius <= probe_radius && pi.z > probe_surface) 
+ 	if(p_radius <= probe_radius && pi.z > probe_surface) 
 	{
 		float3_t normal = {0.0, 0.0, 1.0};
 		particles.n[pidx] = normal;
@@ -880,9 +880,9 @@ __global__ void do_contact_froce(particle_gpu particles, float_t dt,
 			particles.T[pidx] += thermals_wp.eta * dt * fy * v_rel_mag / (thermals_wp.cp * physics.mass);
 		}
 
-	}*/
+	}
 	// center raduis of the shoulder
-/*	float_t centerShoulderRadis = (shoulder_radius + probe_radius) / 2.0;
+	float_t centerShoulderRadis = (shoulder_radius + probe_radius) / 2.0;
 
 	// Particle is penetrating the shoulder from inside
 	if (p_radius < centerShoulderRadis && p_radius > probe_radius && pi.z > shoulder_surface + dz)
@@ -947,14 +947,17 @@ __global__ void do_contact_froce(particle_gpu particles, float_t dt,
 		vec3_t r(-shoulder_radius * normal.x, -shoulder_radius * normal.y, 0.0);
 		vec3_t vm = glm::cross(w, r);
 		vm.z = shoulder_velocity;
+		
 		// Compute relative velocity
 		float4_t v_particle = particles.vel[pidx];
 		float3_t v_diff = make_float3_t(v_particle.x - vm.x, v_particle.y - vm.y, v_particle.z - vm.z);
 		float_t v_diff_dot_normal = v_diff.x * normal.x + v_diff.y * normal.y + v_diff.z * normal.z;
 		float3_t v_relative = make_float3_t(v_diff.x - v_diff_dot_normal * normal.x, v_diff.y - v_diff_dot_normal * normal.y, v_diff.z - v_diff_dot_normal * normal.z);
 		float_t v_rel_mag = sqrtf(v_relative.x * v_relative.x + v_relative.y * v_relative.y + v_relative.z * v_relative.z);
+		
 		// Compute normal contact force
 		kirk_contact_force(fN, gN, v_diff, normal, dt, p_temp);
+	
 		// Compute tangential contact force
 		vec3_t v_relative_vec = {v_relative.x, v_relative.y, v_relative.z};
 		vec3_t kdeltae = contact_alpha * physics.mass * v_relative_vec / dt;
@@ -973,7 +976,7 @@ __global__ void do_contact_froce(particle_gpu particles, float_t dt,
 			// Heat generation
 			particles.T[pidx] += thermals_wp.eta * dt * fy * v_rel_mag / (thermals_wp.cp * physics.mass);
 		}
-	}*/
+	}
 
 	// Update particle forces
 	particles.fc[pidx] = make_float3_t(fN.x, fN.y, fN.z);
